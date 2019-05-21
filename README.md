@@ -11,6 +11,7 @@ git clone https://github.com/skywolf829/DeepMammo
 ~~~~
 git clone https://github.com/machrisaa/tensorflow-vgg
 ~~~~
+<<<<<<< HEAD
 4. Clone tensorflow models with
 ~~~~
 git clone https://github.com/tensorflow/models/
@@ -20,26 +21,33 @@ git clone https://github.com/tensorflow/models/
 pip install argparse sklearn keras tensorflow numpy matplotlib
 ~~~~
 6. Download the Inception v4 pre-trained model from https://github.com/tensorflow/models/tree/master/research/slim
+=======
+4. Install python packages with
+~~~~
+pip install argparse sklearn keras tensorflow numpy matplotlib
+~~~~
+>>>>>>> fac5b65b3e8cc58d07b11926fe21212a4591145b
 
 ## Files
 
 ### classifier.py
 Used to create a classifier utilizing VGG19 with a linear SVM for transfer learning. In lines 21 and 22, decide which folders will be for the two classes (see lines 15-17 for options). Run this code with 
-'''
+~~~~
 python classifier.py
-'''
+~~~~
 The saved codes and labels will be dumped in the directory the script is in as codes.npy and labels.npy. This script may take a few minutes to run depending on the machine, but takes roughly 30 seconds on a 2080Ti.
 Script will output predictions and accuracy on a 20% test split at the end.
 
 ### classifier_auc.py
 Used to create a classifier. utilizing VGG19 with a linear SVM for transfer learning. In lines 24 and 25, decide which folders will be for the two calsses (see lines 18-20 for options). Run this code with
-'''
+~~~~
 python classifier_auc.py
-'''
+~~~~
 The saved codes and labels will be dumped in the directory the script is in as codes.npy and labels.npy. This script may take a few minutes to run depending on the machine, but takes roughly 30 seconds on a 2080Ti.
 The script will output guesses as well as create a Area-Under-Curve (AUC) graph at the end for evalutation.
 
 ### utility_functions.py
+<<<<<<< HEAD
 Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. Also used to create the train/test split necessary for building the TFRecords for the tf-slim related models such as inception.
 
 ### build_image_data.py
@@ -54,3 +62,6 @@ To replicate, change lines 79, 81, 83, 101 to the respective file locations for 
 '../ImagesForTFRecord/LabelsFiles/ABNORMALvsCONTRALATERAL.txt'
 
 This was repeated for each combination, ABNORMALvsCONTRALATERAL, NORMALvsABNORMAL, NORMALvsCONTRALATERAL.
+=======
+Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. 
+>>>>>>> fac5b65b3e8cc58d07b11926fe21212a4591145b
