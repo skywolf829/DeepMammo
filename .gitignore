@@ -102,3 +102,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+Solution3/Code/inception_v4.ckpt

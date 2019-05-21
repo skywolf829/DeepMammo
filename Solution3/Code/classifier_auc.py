@@ -20,11 +20,12 @@ contralateral_cancer_images = '../Images/CONTRALATERAL BREAST TO CANCEROUS'
 normal_images = '../Images/NORMAL'
 codes_path = './codes'
 labels_path = './labels'
+names_path = './names'
 
-class_0 = cancer_images
-class_1 = normal_images
+class_0 = normal_images
+class_1 = contralateral_cancer_images
 
-images, labels = utility_functions.loadImagesFromDir((class_0, class_1), (0,1))
+images, labels, names = utility_functions.loadImagesFromDir((class_0, class_1), (0,1))
 print("Images: " + str(np.shape(images)))
 print("Labels: " + str(np.shape(labels)))
 
@@ -42,9 +43,11 @@ sess.close()
 
 np.save(codes_path, codes) 
 np.save(labels_path, labels) 
+np.save(names_path, names)
 
 pickle.dump(codes, open('codes', 'wb'))
 pickle.dump(labels, open('labels', 'wb'))
+pickle.dump(names, open('names', 'wb'))
 
 X_train, X_test, y_train, y_test = train_test_split(codes, labels, test_size=0.2, random_state=0)
 

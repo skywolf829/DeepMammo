@@ -3,18 +3,23 @@ This is the third solution to using deep learning and transfer learning for dete
 
 ## Getting started
 1. Clone repository with
-'''
+~~~~
 git clone https://github.com/skywolf829/DeepMammo
-'''
+~~~~
 2. Navigate to the DeepMammo/Solution3/Code folder.
 3. Clone tensorflow-vgg with
-'''
+~~~~
 git clone https://github.com/machrisaa/tensorflow-vgg
-'''
-4. Install python packages with
-'''
+~~~~
+4. Clone tensorflow models with
+~~~~
+git clone https://github.com/tensorflow/models/
+~~~~
+5. Install python packages with
+~~~~
 pip install argparse sklearn keras tensorflow numpy matplotlib
-'''
+~~~~
+6. Download the Inception v4 pre-trained model from https://github.com/tensorflow/models/tree/master/research/slim
 
 ## Files
 
@@ -35,4 +40,17 @@ The saved codes and labels will be dumped in the directory the script is in as c
 The script will output guesses as well as create a Area-Under-Curve (AUC) graph at the end for evalutation.
 
 ### utility_functions.py
-Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. 
+Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. Also used to create the train/test split necessary for building the TFRecords for the tf-slim related models such as inception.
+
+### build_image_data.py
+Originaly taken from models/research/inception/inception/data/build_image_data.py.
+Takes folders of images and creates TFRecords for them. Used for the inceptionv4 model available.
+
+To replicate, change lines 79, 81, 83, 101 to the respective file locations for train directory, validation directory, output directory, and labels directory respectively. Examples are:
+
+'../ImagesForTFRecord/TrainingSet/ABNORMALvsCONTRALATERAL'
+'../ImagesForTFRecord/TestSet/ABNORMALvsCONTRALATERAL'
+'../TFRecords/ABNORMALvsCONTRALATERAL'
+'../ImagesForTFRecord/LabelsFiles/ABNORMALvsCONTRALATERAL.txt'
+
+This was repeated for each combination, ABNORMALvsCONTRALATERAL, NORMALvsABNORMAL, NORMALvsCONTRALATERAL.
