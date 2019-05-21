@@ -3,34 +3,34 @@ This is the third solution to using deep learning and transfer learning for dete
 
 ## Getting started
 1. Clone repository with
-'''
+~~~~
 git clone https://github.com/skywolf829/DeepMammo
-'''
+~~~~
 2. Navigate to the DeepMammo/Solution3/Code folder.
 3. Clone tensorflow-vgg with
-'''
+~~~~
 git clone https://github.com/machrisaa/tensorflow-vgg
-'''
+~~~~
 4. Install python packages with
-'''
+~~~~
 pip install argparse sklearn keras tensorflow numpy matplotlib
-'''
+~~~~
 
 ## Files
 
 ### classifier.py
 Used to create a classifier utilizing VGG19 with a linear SVM for transfer learning. In lines 21 and 22, decide which folders will be for the two classes (see lines 15-17 for options). Run this code with 
-'''
+~~~~
 python classifier.py
-'''
+~~~~
 The saved codes and labels will be dumped in the directory the script is in as codes.npy and labels.npy. This script may take a few minutes to run depending on the machine, but takes roughly 30 seconds on a 2080Ti.
 Script will output predictions and accuracy on a 20% test split at the end.
 
 ### classifier_auc.py
 Used to create a classifier. utilizing VGG19 with a linear SVM for transfer learning. In lines 24 and 25, decide which folders will be for the two calsses (see lines 18-20 for options). Run this code with
-'''
+~~~~
 python classifier_auc.py
-'''
+~~~~
 The saved codes and labels will be dumped in the directory the script is in as codes.npy and labels.npy. This script may take a few minutes to run depending on the machine, but takes roughly 30 seconds on a 2080Ti.
 The script will output guesses as well as create a Area-Under-Curve (AUC) graph at the end for evalutation.
 
