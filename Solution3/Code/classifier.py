@@ -28,7 +28,7 @@ codes_path = './codes'
 labels_path = './labels'
 names_path = './names'
 
-class_0 = contralateral_cancer_images
+class_0 = normal_images
 class_1 = cancer_images
 
 images, labels, names = utility_functions.loadImagesFromDir((class_0, class_1), (0,1))
@@ -47,19 +47,10 @@ feed_dict = {input_: images}
 codes = sess.run(vgg.relu6, feed_dict=feed_dict)
 sess.close()
 
-np.save(codes_path, codes) 
-np.save(labels_path, labels) 
-np.save(names_path, names)
-
-pickle.dump(codes, open('codes', 'wb'))
-pickle.dump(labels, open('labels', 'wb'))
-pickle.dump(names, open('names', 'wb'))
-print("Codes loaded: " + str(np.shape(codes)))
-print("Labels loaded: " + str(np.shape(labels)))
 codes = np.array(codes)
 labels = np.array(labels)
 
-clf = SVC(kernel='linear', gamma='scale', C=.000001)
+clf = SVC(kernel='linear', gamma='scale', C=.0001)
 #clf = SVC(kernel='rbf', gamma='scale', C=1)
 #clf = KNeighborsClassifier(3)
 #clf = DecisionTreeClassifier(max_depth=5, max_features=1)
@@ -75,7 +66,7 @@ i = 0
 averageScore = 0
 rollingAverage = 0
 rkf = RepeatedKFold(n_splits=kFolds, n_repeats=iterations, random_state=random_state)
-
+"""
 for train_index, test_index in rkf.split(codes):
     X_train, X_test = codes[train_index], codes[test_index]
     y_train, y_test = labels[train_index], labels[test_index]
@@ -91,9 +82,37 @@ for train_index, test_index in rkf.split(codes):
 averageScore = averageScore / i
 
 print("Average score: " + str(averageScore))
+"""
+X_train, X_test, y_train, y_test = train_test_split(codes, labels, test_size=0.4, random_state=0)
+#clf.fit(X_train, y_train)
 
-X_train, X_test, y_train, y_test = train_test_split(codes, labels, test_size=0.2, random_state=0)
+
 clf.fit(X_train, y_train)
+score = clf.score(codes, labels)
+confidence_values = clf.decision_function(codes)
+predictions = clf.predict(codes)
+print("Final score: " + str(score))
+
+model_confidence = {}
+model_classification = {}
+i = 0
+for item in confidence_values:
+    model_confidence[names[i]] = abs(item)
+    i = i + 1
+i = 0
+for item in predictions:
+    model_classification[names[i]] = item
+    i = i + 1
+
+radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
+pickle.dump(radio_input_classify, open('radio_input_classify', 'wb'))
+pickle.dump(radio_input_confidence, open('radio_input_confidence', 'wb'))
+pickle.dump(model_classification, open('model_input_classify', 'wb'))
+pickle.dump(model_confidence, open('model_input_confidence', 'wb'))
+
+pickle.dump(codes, open('codes', 'wb'))
+pickle.dump(labels, open('labels', 'wb'))
+pickle.dump(names, open('names', 'wb'))
 
 #print("Confidence values")
 #print(clf.decision_function(X_test))

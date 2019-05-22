@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, '/tensorflowvgg')
 import os
+import csv
 import pickle
 from os.path import isfile, isdir
 import numpy as np
@@ -115,3 +116,74 @@ def loadImagesFromDir(dirs, classification):
             names.append(file)
     return batch, labels, names
 
+"""
+Loads a csv file with average responses for images to be classified as cancerous or normal.
+
+Input:
+file_loc - string of the csv file to read
+    Row 1 should be the image names
+    Row 2 should be the confidence values where 100 is cancerous and 0 is normal
+cancer_label - the label for the decision an image contains cancer
+normal_label - the label for the decision an image is normal
+
+Returns:
+radio_input_classify - a dictionary mapping from image name -> classification (cancerous or normal)
+radio_input_confidence - a dictionary mapping from image name -> confidence in the decision
+"""
+def loadRadiologistData(file_loc, cancer_label, normal_label):
+    radio_input_classify = {}
+    radio_input_confidence = {}
+    with open(file_loc) as file:
+        csvFile = csv.reader(file)
+        r = 0
+        for row in csvFile:                 
+            if r != 0:
+                image_name = row[0].replace('-', '_') + ".bmp"
+                if image_name != None and image_name != "" and image_name != " ":
+                    if image_name not in radio_input_classify:
+                        radio_input_classify[image_name] = normal_label
+                        radio_input_confidence[image_name] = .5
+                    if image_name not in radio_input_confidence:
+                        radio_input_classify[image_name] = normal_label
+                        radio_input_confidence[image_name] = .5   
+
+                    if row[1] is not "" and row[1] is not " " and row[1] is not None:
+                        value = float(row[1])
+                        if value < 50:
+                            radio_input_classify[image_name] = cancer_label
+                            radio_input_confidence[image_name] = (50 - value) / 50
+                        else:
+                            radio_input_classify[image_name] = normal_label
+                            radio_input_confidence[image_name] = (value - 50) / 50
+            r = r + 1
+    return radio_input_classify, radio_input_confidence
+
+"""
+Creates a new array of size Nx4 where the entries are 
+    model confidence, model classification, radiologist confidence, radiologist classification
+
+Input:
+    img_to_confidence_model - dictionary of filenames -> confidence values for the output of a model
+    img_to_classification_model - dictionary of filenames -> classification for the output of a model
+    img_to_confidence_radiologist - dictionary of filenames -> confidence values for a radiologist decision
+    img_to_classification_radiologist - dictionary of filenames -> classification for the radiologist decision
+
+Returns:
+    Nx4 array where each entry is the 4 above values in that order
+"""
+def createFeaturesFromDicts(img_to_confidence_model, img_to_classification_model, img_to_confidence_radiologist, img_to_classification_radiologist, filenames):
+    newInputs = []
+    for filename in filenames:
+        featureVector = []
+        featureVector.append(img_to_classification_model[filename])
+        featureVector.append(img_to_confidence_model[filename])
+        if filename in img_to_classification_radiologist:
+            featureVector.append(img_to_classification_radiologist[filename])
+        else:
+            featureVector.append(0)    
+        if filename in img_to_confidence_radiologist:    
+            featureVector.append(img_to_confidence_radiologist[filename])
+        else:
+            featureVector.append(0)    
+        newInputs.append(featureVector)
+    return newInputs
