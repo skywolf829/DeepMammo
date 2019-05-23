@@ -11,7 +11,6 @@ git clone https://github.com/skywolf829/DeepMammo
 ~~~~
 git clone https://github.com/machrisaa/tensorflow-vgg
 ~~~~
-<<<<<<< HEAD
 4. Clone tensorflow models with
 ~~~~
 git clone https://github.com/tensorflow/models/
@@ -21,12 +20,10 @@ git clone https://github.com/tensorflow/models/
 pip install argparse sklearn keras tensorflow numpy matplotlib
 ~~~~
 6. Download the Inception v4 pre-trained model from https://github.com/tensorflow/models/tree/master/research/slim
-=======
-4. Install python packages with
+7. Install python packages with
 ~~~~
 pip install argparse sklearn keras tensorflow numpy matplotlib
 ~~~~
->>>>>>> fac5b65b3e8cc58d07b11926fe21212a4591145b
 
 ## Files
 
@@ -62,6 +59,5 @@ To replicate, change lines 79, 81, 83, 101 to the respective file locations for 
 '../ImagesForTFRecord/LabelsFiles/ABNORMALvsCONTRALATERAL.txt'
 
 This was repeated for each combination, ABNORMALvsCONTRALATERAL, NORMALvsABNORMAL, NORMALvsCONTRALATERAL.
-=======
-Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. 
->>>>>>> fac5b65b3e8cc58d07b11926fe21212a4591145b
+
+
