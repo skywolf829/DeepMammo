@@ -14,7 +14,10 @@ git clone https://github.com/skywolf829/DeepMammo
 git clone https://github.com/machrisaa/tensorflow-vgg
 ~~~~
 
-4. Rename tensorflow-vgg to tensorflowvgg with ~~~~mv tensorflow-vgg tensorflowvgg~~~~
+4. Rename tensorflow-vgg to tensorflowvgg with 
+~~~~
+mv tensorflow-vgg tensorflowvgg
+~~~~
 
 5. Naivgate into Solution3/Code/tensorflowvgg and open vgg19.py. Edit line 20
 ~~~~
