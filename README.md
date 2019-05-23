@@ -61,7 +61,6 @@ The saved codes and labels will be dumped in the directory the script is in as c
 The script will output guesses as well as create a Area-Under-Curve (AUC) graph at the end for evalutation.
 
 ### utility_functions.py
-<<<<<<< HEAD
 Houses various utility functions that slim down the code in classifier.py and classifier_auc.py. Mainly for loading the images and labels into Nx224x224x3 and Nx1 tensors for VGG19. Also used to create the train/test split necessary for building the TFRecords for the tf-slim related models such as inception.
 
 ### build_image_data.py
