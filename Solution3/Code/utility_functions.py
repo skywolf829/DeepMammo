@@ -1,17 +1,18 @@
 import sys
-sys.path.insert(0, '/tensorflowvgg')
+#sys.path.insert(0, '/tensorflowvgg')
 import os
 import csv
 import pickle
 from os.path import isfile, isdir
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 from keras.preprocessing.image import load_img, img_to_array
-from sklearn.svm import SVC, LinearSVC
+#from sklearn.svm import SVC, LinearSVC
 from sklearn.model_selection import train_test_split
 import argparse
-import tensorflowvgg.vgg19 as vgg19
-from PIL import Image
+#import tensorflowvgg.vgg19 as vgg19
+from PIL import Image, ImageFilter
+import cv2
 
 """
 Takes a directory and splits it into a group of training and testing data.
@@ -140,12 +141,12 @@ def loadRadiologistData(file_loc, cancer_label, normal_label):
             if r != 0:
                 image_name = row[0].replace('-', '_') + ".bmp"
                 if image_name != None and image_name != "" and image_name != " ":
-                    if image_name not in radio_input_classify:
-                        radio_input_classify[image_name] = normal_label
-                        radio_input_confidence[image_name] = .5
-                    if image_name not in radio_input_confidence:
-                        radio_input_classify[image_name] = normal_label
-                        radio_input_confidence[image_name] = .5   
+                    #if image_name not in radio_input_classify:
+                    #    radio_input_classify[image_name] = normal_label
+                    #    radio_input_confidence[image_name] = .5
+                    #if image_name not in radio_input_confidence:
+                    #    radio_input_classify[image_name] = normal_label
+                    #    radio_input_confidence[image_name] = .5   
 
                     if row[1] is not "" and row[1] is not " " and row[1] is not None:
                         value = float(row[1])
@@ -187,3 +188,137 @@ def createFeaturesFromDicts(img_to_confidence_model, img_to_classification_model
             featureVector.append(0)    
         newInputs.append(featureVector)
     return newInputs
+
+"""
+Prints items one by one in the list on new lines. Easy to copy into excel
+
+Inputs:
+theList - a list to be printed
+"""
+def printListInOrder(theList):
+    for item in theList:
+        print(item)
+
+"""
+Prints values from theDictonary in the order of theList, given that theList is a subset of theDictionary.keys
+
+Inputs:
+theList - a list of keys for theDictionary
+theDictionary - a dictionary to have its values printed
+"""
+def printDictionaryInOrder(theList, theDictionary):
+    for item in theList:
+        if item in theDictionary.keys():
+            print(theDictionary[item])
+        else:
+            print("")
+
+"""
+Creates bilateral images from unilateral images using PIL
+
+Inputs:
+list_1 - list of file locations for one side mammogram
+list_2 - list of file locations for other side mammogram
+names - list of file locations to save output files
+
+Note that these should all be in the same order. That is, list_1[i] is the same subject as list_2[i] with the name being names[i]
+"""
+def createBilateralFromUnilateral(list_1, list_2, names):
+    
+    for i in range(len(list_1)):
+        print("Opening " + list_1[i] + " " + list_2[i])
+
+        img_1 = Image.open(list_1[i])
+        img_2 = Image.open(list_2[i])
+        totalWidth = img_1.size[0] + img_2.size[0]
+        height = max([img_1.size[1], img_2.size[1]])
+        
+        new_im = Image.new('RGBA', (totalWidth, height))
+        new_im.paste(img_1, (0,0))
+        new_im.paste(img_2, (img_1.size[0],0))    
+        new_im.save(names[i] + ".png", 'png')
+
+"""
+Used to create bilateral images from folders of unilateral images.
+"""
+def createNewDirectoryAndMakeBilaterals():
+    bilateralImagesPath = "../Images/Bilateral"
+    normalBilateralImagePath = "../Images/Bilateral/Normal"
+    cancerBilateralImagePath = "../Images/Bilateral/Cancer"
+    normalImagePath = "../Images/NORMAL"
+    cancerImagePath = "../Images/CANCER"
+    contralateralImagePath = "../Images/CONTRALATERAL BREAST TO CANCEROUS"
+
+    if not os.path.exists(bilateralImagesPath):
+        os.mkdir(bilateralImagesPath)
+        print("Directory " , bilateralImagesPath ,  " Created ")
+    else:    
+        print("Directory " , bilateralImagesPath ,  " already exists")
+
+    if not os.path.exists(normalBilateralImagePath):
+        os.mkdir(normalBilateralImagePath)
+        print("Directory " , normalBilateralImagePath ,  " Created ")
+    else:    
+        print("Directory " , normalBilateralImagePath ,  " already exists")
+
+    if not os.path.exists(cancerBilateralImagePath):
+        os.mkdir(cancerBilateralImagePath)
+        print("Directory " , cancerBilateralImagePath ,  " Created ")
+    else:    
+        print("Directory " , cancerBilateralImagePath ,  " already exists")
+
+    normalImagePaths = {}
+    cancerImagePaths = {}
+    for item in os.listdir(normalImagePath):
+        number = int(item.split("_")[0].split("N")[1])
+        letter = item.split("_")[1].split(".")[0]
+        if number not in normalImagePaths.keys():
+            normalImagePaths[number] = {}
+        normalImagePaths[number][letter] = os.path.join(normalImagePath, item)
+    for item in os.listdir(cancerImagePath):
+        number = int(item.split("_")[0].split("D")[1])
+        letter = str(item.split("_")[1].split(".")[0])
+        if number not in cancerImagePaths.keys():
+            cancerImagePaths[number] = {}
+        cancerImagePaths[number][letter] = os.path.join(cancerImagePath, item)
+    for item in os.listdir(contralateralImagePath):
+        number = int(item.split("_")[0].split("D")[1])
+        letter = str(item.split("_")[1].split(".")[0])
+        if number not in cancerImagePaths.keys():
+            cancerImagePaths[number] = {}
+        cancerImagePaths[number][letter] = os.path.join(contralateralImagePath, item)
+    normalNames = []
+    cancerNames = []
+    leftSideNormal = []
+    rightSideNormal = []
+    leftSideCancer = []
+    rightSideCancer = []
+
+    for item in normalImagePaths.keys():
+        leftSideNormal.append(normalImagePaths[item]["L"])
+        rightSideNormal.append(normalImagePaths[item]["R"])
+        normalNames.append(os.path.join(normalBilateralImagePath, "N" + str(item) + "_bilateral"))
+    for item in cancerImagePaths.keys():
+        leftSideCancer.append(cancerImagePaths[item]["L"])
+        rightSideCancer.append(cancerImagePaths[item]["R"])
+        cancerNames.append(os.path.join(cancerBilateralImagePath, "AD" + str(item) + "_bilateral"))
+    createBilateralFromUnilateral(leftSideNormal, rightSideNormal, normalNames)
+    createBilateralFromUnilateral(leftSideCancer, rightSideCancer, cancerNames)
+
+def cropImageTest():
+    image = Image.open('../Images/NORMAL/N3_R.bmp')
+    image.save('test_000.png')
+    i = 1
+    for i in range(20):                
+        image = image.filter(ImageFilter.MedianFilter(size=9))
+           
+        #image = image.filter(ImageFilter.MinFilter(size=17))
+
+#        image.save('test_' + str(i) + '_1.png') 
+ #       image = image.filter(ImageFilter.MaxFilter(size=9))
+  #      image.save('test_' + str(i) + '_2.png') 
+    i = 1
+    for i in range(10):
+        image = image.filter(ImageFilter.MinFilter(size=9))
+    image.save('test_' + str(i) + '_0.png')   
+cropImageTest()
