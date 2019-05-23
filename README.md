@@ -28,7 +28,7 @@ to look like
 self.data_dict = np.load(vgg19_npy_path, encoding='latin1', allow_pickle=True).item()
 ~~~~
 
-6. Clone tensorflow models with
+6. Navigate to Solution3/Code and clone tensorflow models with
 ~~~~
 git clone https://github.com/tensorflow/models/
 ~~~~
@@ -38,7 +38,7 @@ git clone https://github.com/tensorflow/models/
 pip install argparse sklearn keras tensorflow numpy matplotlib
 ~~~~
 
-8. Download the Inception v4 pre-trained model from https://github.com/tensorflow/models/tree/master/research/slim. Place it in the Code directory.
+8. Download the Inception v4 pre-trained model from https://github.com/tensorflow/models/tree/master/research/slim. Place it in the Solution3/Code directory.
 
 9. Download the VGG19 pre-trained model from https://mega.nz/#!xZ8glS6J!MAnE91ND_WyfZ_8mvkuSa2YcA7q-1ehfSm-Q1fxOvvs. Place this in Solution3/Code/tensorflowvgg.
 
