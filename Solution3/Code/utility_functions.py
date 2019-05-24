@@ -11,7 +11,7 @@ from keras.preprocessing.image import load_img, img_to_array
 from sklearn.model_selection import train_test_split
 import argparse
 #import tensorflowvgg.vgg19 as vgg19
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageChops
 import cv2
 
 """
@@ -305,20 +305,109 @@ def createNewDirectoryAndMakeBilaterals():
     createBilateralFromUnilateral(leftSideNormal, rightSideNormal, normalNames)
     createBilateralFromUnilateral(leftSideCancer, rightSideCancer, cancerNames)
 
-def cropImageTest():
-    image = Image.open('../Images/NORMAL/N3_R.bmp')
-    image.save('test_000.png')
-    i = 1
-    for i in range(20):                
-        image = image.filter(ImageFilter.MedianFilter(size=9))
-           
-        #image = image.filter(ImageFilter.MinFilter(size=17))
+def removeMassesNotOnSides(image):
+    image = np.array(image)
+    status = {}
+    toCheck = []
+    newImage = np.zeros(image.shape)
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            status[(i, j)] = False
 
-#        image.save('test_' + str(i) + '_1.png') 
- #       image = image.filter(ImageFilter.MaxFilter(size=9))
-  #      image.save('test_' + str(i) + '_2.png') 
+    for i in range(image.shape[0]):
+        toCheck.append((i, 0))
+        toCheck.append((i, image.shape[1]-1))
+    for i in range(image.shape[1] - 2):
+        toCheck.append((0, i+1))
+        toCheck.append((image.shape[0]-1, i+1))
+
+    while(len(toCheck) > 0):
+        spot = toCheck.pop(0)
+        #print("Checking " + str(spot))
+        if not status[spot]:
+            #print("Spot not checked yet.")
+            status[spot] = True
+            if image[spot] > 20:
+                newImage[spot[0], spot[1]] = image[spot[0], spot[1]]
+                if(spot[0] > 0):
+                    toCheck.append((spot[0] - 1, spot[1]))
+                if(spot[0] < image.shape[0]- 1):
+                    toCheck.append((spot[0] + 1, spot[1]))
+                if(spot[1] > 0):
+                    toCheck.append((spot[0], spot[1] - 1))
+                if(spot[1] < image.shape[1] - 1):
+                    toCheck.append((spot[0], spot[1] + 1))
+        #else:
+            #print("Spot checked")
+    return Image.fromarray(np.uint8(newImage))
+
+def cropImageTest(image_path, final_image_path):
+    image = Image.open(image_path).convert('L')
+    #image.save('test_start.png')
+    image = image.filter(ImageFilter.BoxBlur(9)) #3
+    image = image.filter(ImageFilter.MaxFilter(size=3)) #3
+    image = image.filter(ImageFilter.MinFilter(size=17)) #17
+    image = image.filter(ImageFilter.MinFilter(size=9)) #9
+    
+    image = image.filter(ImageFilter.MaxFilter(size=3)) #3
+    image = image.filter(ImageFilter.MaxFilter(size=9)) #3
+    image = np.array(image)
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):                        
+            #image[x, y] = min((image[x, y], 150))
+            if image[x, y] < 100:
+                image[x, y] = 0            
+    image = Image.fromarray(np.uint8(image))
+    #image.save('test_000mind.png')
     i = 1
-    for i in range(10):
-        image = image.filter(ImageFilter.MinFilter(size=9))
-    image.save('test_' + str(i) + '_0.png')   
-cropImageTest()
+    #image = image.filter(ImageFilter.MinFilter(size=9))
+    for i in range(2):                       
+        image = image.filter(ImageFilter.MedianFilter(size=17))
+        #if i % 5 == 0:
+        #    if i % 10 == 0:
+        #        image = image.filter(ImageFilter.MinFilter(size=9))
+        #    else:
+        #        image = image.filter(ImageFilter.MaxFilter(size=9))
+        #image.save('test_0_' + str(i)+'.png')   
+    image = np.array(image)
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):                        
+            #image[x, y] = min((image[x, y], 150))
+            if image[x, y] < 100:
+                image[x, y] = 0  
+            else:
+                image[x, y] = 255
+    image = Image.fromarray(np.uint8(image))
+    image = removeMassesNotOnSides(image)
+    #image.save('test_final.png')
+    image = ImageChops.invert(image)
+    image = np.array(image)
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):                
+            if image[x, y] < 150:
+                image[x, y] = 0
+            else:
+                image[x, y] = 255
+    image = Image.fromarray(np.uint8(image))
+    image = image.filter(ImageFilter.MinFilter(size=33))
+    #image.save('test_final_invert.png')
+    image_og = Image.open(image_path).convert('L')
+    image = ImageChops.multiply(image, image_og)
+    image.save(final_image_path)
+
+def cropAllImagesInDirToDir(original_dir, save_dir):
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+        print("Directory " , save_dir ,  " Created ")
+    else:    
+        print("Directory " , save_dir ,  " already exists")
+
+    for image_name in os.listdir(original_dir):
+        print("Cropping " + str(image_name))
+        imageShortName = image_name.split(".")[0]
+        new_path = os.path.join(save_dir, imageShortName + ".png")
+        cropImageTest(os.path.join(original_dir, image_name), new_path)
+        print("Finished cropping " + str(image_name))
+
+#cropImageTest("../Images/CANCER/AD22_L.bmp", "test_final_masked.png")
+cropAllImagesInDirToDir("../Images/CANCER", "../Images/Cropped/Cancer_newfilters")
