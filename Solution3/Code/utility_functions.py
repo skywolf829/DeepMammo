@@ -305,6 +305,39 @@ def createNewDirectoryAndMakeBilaterals():
     createBilateralFromUnilateral(leftSideNormal, rightSideNormal, normalNames)
     createBilateralFromUnilateral(leftSideCancer, rightSideCancer, cancerNames)
 
+def createRotatedAndMirroredImages(startingImagesDir, newDir):
+    for image_name in os.listdir(startingImagesDir):
+        print(image_name)
+        if len(image_name) < 2:
+            continue
+        imagePath = os.path.join(startingImagesDir, image_name)
+        n = image_name.split('_')[0]
+        side = image_name.split('_')[1].split('.')[0]
+        image = Image.open(imagePath)
+        image_90 = image.rotate(90)
+        image_180 = image.rotate(180)
+        image_270 = image.rotate(270)
+        image_flip_LR = image.transpose(Image.FLIP_LEFT_RIGHT)
+        image_flip_UD = image.transpose(Image.FLIP_TOP_BOTTOM)
+        image_90_flip_LR = image_90.transpose(Image.FLIP_LEFT_RIGHT)
+        image_90_flip_UD = image_90.transpose(Image.FLIP_TOP_BOTTOM)
+        image_180_flip_LR = image_180.transpose(Image.FLIP_LEFT_RIGHT)
+        image_180_flip_UD = image_180.transpose(Image.FLIP_TOP_BOTTOM)
+        image_270_flip_LR = image_270.transpose(Image.FLIP_LEFT_RIGHT)
+        image_270_flip_UD = image_270.transpose(Image.FLIP_TOP_BOTTOM)
+        image.save(os.path.join(newDir, n + "000"+"_"+side+".png"))
+        image_90.save(os.path.join(newDir, n+"001"+"_"+side+".png"))
+        image_180.save(os.path.join(newDir, n+"002"+"_"+side+".png"))
+        image_270.save(os.path.join(newDir, n+"003"+"_"+side+".png"))
+        image_flip_LR.save(os.path.join(newDir, n+"004_"+side+".png"))
+        image_flip_UD.save(os.path.join(newDir, n+"005_"+side+".png"))
+        image_90_flip_LR.save(os.path.join(newDir, n+"006_"+side+".png"))
+        image_90_flip_UD.save(os.path.join(newDir, n+"007_"+side+".png"))
+        image_180_flip_LR.save(os.path.join(newDir, n+"008_"+side+".png"))
+        image_180_flip_UD.save(os.path.join(newDir, n+"009_"+side+".png"))
+        image_270_flip_LR.save(os.path.join(newDir, n+"010_"+side+".png"))
+        image_270_flip_UD.save(os.path.join(newDir, n+"011_"+side+".png"))
+
 def removeMassesNotOnSides(image):
     image = np.array(image)
     status = {}
@@ -410,4 +443,7 @@ def cropAllImagesInDirToDir(original_dir, save_dir):
         print("Finished cropping " + str(image_name))
 
 #cropImageTest("../Images/CANCER/AD22_L.bmp", "test_final_masked.png")
-cropAllImagesInDirToDir("../Images/CANCER", "../Images/Cropped/Cancer_newfilters")
+#cropAllImagesInDirToDir("../Images/CANCER", "../Images/Cropped/Cancer_newfilters")
+#createRotatedAndMirroredImages("../Images/CANCER", "../Images/FlippedAndRotated/Cancer")
+#createRotatedAndMirroredImages("../Images/NORMAL", "../Images/FlippedAndRotated/Normal")
+#createRotatedAndMirroredImages("../Images/CONTRALATERAL BREAST TO CANCEROUS", "../Images/FlippedAndRotated/Contralateral")
