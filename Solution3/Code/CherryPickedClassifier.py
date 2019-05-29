@@ -116,9 +116,24 @@ for item in confidence_values_contralateral:
 fpr, tpr, thresholds = roc_curve(y_test, confidence_values)
 roc_auc = auc(fpr, tpr)
 print("AUC: " + str(roc_auc))
+"""
+plt.plot(fpr, tpr, 'darkorange',
+         label='AUC = %0.2f'% roc_auc)
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("ROC Curve - Linear SVM")
+plt.plot([0, 1], [0, 1], color='#67809f', linestyle='--')
+plt.xlim([-0.1, 1.0])
+plt.ylim([-0.1, 1.0])
+plt.ylabel('True Positive Rate', fontsize=14)
+plt.xlabel('False Positive Rate', fontsize=14)
+plt.show()
 
+"""
+"""
 
+The following code is to add a voting system in hopes to increase accuracy
 
+"""
 for i in range(len(names_test)):
     name = names_test[i]
     radio_score = radio_input_confidence[name]
@@ -129,6 +144,8 @@ for i in range(len(names_test)):
     else:
         predictions[i] = model_classification[name]
         confidence_values[i] = model_score
+    if predictions[i] == 0:
+        confidence_values[i] = -confidence_values[i]
 
 numCorrect = 0
 for i in range(len(names_test)):
@@ -139,17 +156,17 @@ print("Human input accuracy: " + str(newAccuracy))
 fpr, tpr, thresholds = roc_curve(y_test, confidence_values)
 roc_auc = auc(fpr, tpr)
 print("New AUC: "+str(roc_auc))
-
-utility_functions.printListInOrder(names_test)
-print("break")
-utility_functions.printListInOrder(predictions)
-
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
 plt.legend(loc='lower right', fontsize='x-large')
+plt.title("ROC Curve - Voting System")
 plt.plot([0, 1], [0, 1], color='#67809f', linestyle='--')
 plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
 plt.show()
+#utility_functions.printListInOrder(names_test)
+#print("break")
+#utility_functions.printListInOrder(predictions)
+
