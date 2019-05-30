@@ -15,7 +15,9 @@ from sklearn.svm import SVC
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.manifold import TSNE
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, confusion_matrix, auc, roc_curve
 import argparse
@@ -59,8 +61,22 @@ codes_cancer_test = sess.run(vgg.relu6, feed_dict=feed_dict_cancer_test)
 codes_contralateral = sess.run(vgg.relu6, feed_dict=feed_dict_contralateral)
 sess.close()
 
-clf = LinearSVC(C=0.0001)
+""" next block is for TSNE plot """
+codes_all = np.append(np.append(np.append(codes_normal_train, codes_normal_test, axis=0), codes_cancer_train, axis=0), codes_cancer_test, axis=0)
+codes_all = PCA(n_components=50).fit_transform(codes_all)
+tsne_embedding = TSNE(n_components=2, perplexity=50).fit_transform(codes_all)
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.scatter(tsne_embedding[0:len(codes_normal_train)+len(codes_normal_test),0], tsne_embedding[0:len(codes_normal_train)+len(codes_normal_test),1], edgecolors='none', c="blue", label="normal")
+ax.scatter(tsne_embedding[len(codes_normal_train)+len(codes_normal_test):,0], tsne_embedding[len(codes_normal_train)+len(codes_normal_test):,1], edgecolors='none', c="red", label="cancer")
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("t-sne embedding")
+plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
+plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
+plt.show()
 
+
+clf = LinearSVC(C=0.0001)
 
 X_train = np.append(codes_normal_train, codes_cancer_train, axis=0)
 X_test = np.append(codes_normal_test, codes_cancer_test, axis=0)
