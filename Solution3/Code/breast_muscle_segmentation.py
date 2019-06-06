@@ -12,6 +12,8 @@ import random
 import statistics
 import os
 
+DEBUG = True
+
 def find_start_and_end_points(im):
     start = None
     end = None
@@ -38,21 +40,23 @@ def canny(im):
 
     img[:,:,0] = im
     img = img.astype(np.uint8)
-    #cv2.imshow("first_image",img)
-    #cv2.waitKey(0)
-
+    if DEBUG:
+        cv2.imshow("first_image",img)
+    
     high_thresh, thresh_im = cv2.threshold(img[:int(img.shape[0]), :int(img.shape[1]/2)], 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     lowThresh = 0.5*high_thresh
     edges = cv2.Canny(thresh_im, lowThresh, high_thresh)
 
-    #cv2.imshow("threshimage",thresh_im)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("threshimage",thresh_im)
+    
     img2 = np.zeros([im.shape[0],im.shape[1],1])
     for i in range(edges.shape[0]):
         for j in range(edges.shape[1]):
             img2[i, j,0]=edges[i, j]
-    #cv2.imshow("edges",img2)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("edges",img2)
+    
     
     return img2[:,:,0]
 
@@ -250,12 +254,14 @@ def clean_canny(im, start, end):
     for component in bad_components:
         for item in component:
             im[item[0], item[1]] = 0
-    #cv2.imshow("im_og",im_og)
-    #cv2.waitKey(0)
-    #cv2.imshow("im_before_component_removal",im_before_component_removal)
-    #cv2.waitKey(0)
-    #cv2.imshow("im",im)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("im_og",im_og)
+    
+    if DEBUG:
+        cv2.imshow("im_before_component_removal",im_before_component_removal)
+    
+    if DEBUG:
+        cv2.imshow("im",im)
     return im
 def get_bounding_box(component):
     left = component[0][1]
@@ -372,13 +378,17 @@ def grow_boundary(im, original, component, start, end):
     new_points = []
     spot_to_grow = segment_end
     # grow up
-    
+    maxX = 0
+    if start is not None:
+        maxX = max([maxX, start[1]])
+    if end is not None:
+        maxX = max([maxX, end[1]])
     while spot_to_grow[0] != 0:
         starting_intensity = get_avg_intensity(original, spot_to_grow, 9)
         best_spot = spot_to_grow[1]
         best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]-1, spot_to_grow[1]), 9))
         for i in range(spot_to_grow[1]-2, spot_to_grow[1]+2):
-            if i >= 0 and i < im.shape[1]:
+            if i >= 0 and i < im.shape[1] and i < maxX:
                 spot_intensity = get_avg_intensity(original, (spot_to_grow[0]-1, i), 9)
                 diff = abs(starting_intensity - spot_intensity)
                 if diff < best_diff:
@@ -394,7 +404,7 @@ def grow_boundary(im, original, component, start, end):
         best_spot = spot_to_grow[1]
         best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]+1, spot_to_grow[1]), 9))
         for i in range(spot_to_grow[1]-2, spot_to_grow[1]+2):
-            if i >= 0 and i < im.shape[1]:
+            if i >= 0 and i < im.shape[1] and i < maxX:
                 spot_intensity = get_avg_intensity(original, (spot_to_grow[0]+1, i), 9)
                 diff = abs(starting_intensity - spot_intensity)
                 if diff < best_diff:
@@ -441,14 +451,18 @@ def finalize_boundary(edges, original, start, end):
     im = np.zeros_like(edges)
     for item in component:
         im[item[0], item[1]] = 1
-    #cv2.imshow("finalcomponent",im)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("finalcomponent",im)
+    
     im = grow_boundary(im, original, component, start, end)
-    #cv2.imshow("finalgrowth",im)
-    #cv2.waitKey(0)
+    
+    if DEBUG:
+        cv2.imshow("finalgrowth",im)
+    
     im_filled = fill_image(im)
-    #cv2.imshow("final_filled",im_filled)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("final_filled",im_filled)
+    
     for i in range(im_filled.shape[0]):
         for j in range(im_filled.shape[1]):
             im_filled[i,j] = 1 - im_filled[i,j]
@@ -457,7 +471,8 @@ def finalize_boundary(edges, original, start, end):
 def segment_pectoral_from_breast(path):
     im_og, side = load_im(path)
     mask, bbox = breast_segment(im_og, scale_factor=1)
-
+    if DEBUG:
+        cv2.imshow("FirstMask", mask.astype(np.uint8))
     im_og = np.multiply(im_og, mask)
     im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
     start, end = find_start_and_end_points(im)
@@ -468,15 +483,14 @@ def segment_pectoral_from_breast(path):
     im = anisotropic_diffusion(im, niter=1)
     im = im.astype(np.uint8)
     edges = canny(im)
-    #edges = np.array(PIL.Image.fromarray(edges).resize((int(edges.shape[1]*0.25), int(edges.shape[0]*0.25)), PIL.Image.ANTIALIAS))
     edges = clean_canny(edges, start, end)
     final_mask = finalize_boundary(edges, im, start, end)
-    
-    #cv2.imshow("final_mask",final_mask)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("final_mask",final_mask)
     final_image = np.multiply(im_og.astype(np.uint8), np.array(PIL.Image.fromarray(final_mask).resize((im_og.shape[1], im_og.shape[0]))).astype(np.uint8))
-    #cv2.imshow("final_image",final_image)
-    #cv2.waitKey(0)
+    if DEBUG:
+        cv2.imshow("final_image",final_image)   
+    cv2.waitKey(0)
     return final_image
 
 def save_all_crops(dir, saveDir):
@@ -485,8 +499,7 @@ def save_all_crops(dir, saveDir):
         short_name = im_name.split(".")[0]
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
 
-
-save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethod/Contralateral/")
-#save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethod/Normal/")
-#save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethod/Cancer/")
-
+DEBUG = False
+save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv2/Contralateral/")
+save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv2/Normal/")
+save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv2/Cancer/")
