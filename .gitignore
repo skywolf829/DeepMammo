@@ -106,3 +106,5 @@ Solution3/Code/inception_v4.ckpt
 Solution3/Code/tensorflowvgg/
 Solution3/Code/models/
 Solution3/Images/FlippedAndRotated/
+Solution3/Images/OldCroppingMethod/
+Solution3/Images/NewCroppingMethod/
