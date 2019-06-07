@@ -105,8 +105,15 @@ venv.bak/
 Solution3/Code/inception_v4.ckpt
 Solution3/Code/tensorflowvgg/
 Solution3/Code/models/
+Solution3/Images/CherryPickedWithRadiologistInputCroppedv2/
+Solution3/Images/CherryPickedWithRadiologistInputCroppedv3/
+Solution3/Images/CherryPickedWithRadiologistInputCroppedv4/
+Solution3/Images/CherryPickedWithRadiologistInputCroppedv5/
 Solution3/Images/FlippedAndRotated/
 Solution3/Images/OldCroppingMethod/
 Solution3/Images/NewCroppingMethod/
 Solution3/Images/NewCroppingMethodv1/
 Solution3/Images/NewCroppingMethodv2/
+Solution3/Images/NewCroppingMethodv3/
+Solution3/Images/NewCroppingMethodv4/
+Solution3/Images/NewCroppingMethodv5/

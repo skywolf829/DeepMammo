@@ -467,25 +467,25 @@ def trainTestSplitWithRadioInput():
     contralateral_without_radiologistInput = []
 
     
-    for image_name in os.listdir("../Images/NORMAL"):
+    for image_name in os.listdir("../Images/NewCroppingMethodv5/Normal"):
         if image_name in radio_input_classify.keys():
-            normal_with_radiologistInput.append(os.path.join("../Images/NORMAL", image_name))
+            normal_with_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Normal", image_name))
         else:
-            normal_without_radiologistInput.append(os.path.join("../Images/NORMAL", image_name))
+            normal_without_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Normal", image_name))
         normal_count = normal_count + 1
 
-    for image_name in os.listdir("../Images/CANCER"):
+    for image_name in os.listdir("../Images/NewCroppingMethodv5/Cancer"):
         if image_name in radio_input_classify.keys():
-            abnormal_with_radiologistInput.append(os.path.join("../Images/CANCER", image_name))
+            abnormal_with_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Cancer", image_name))
         else:
-            abnormal_without_radiologistInput.append(os.path.join("../Images/CANCER", image_name))
+            abnormal_without_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Cancer", image_name))
         abnormal_count = abnormal_count + 1
 
-    for image_name in os.listdir("../Images/CONTRALATERAL BREAST TO CANCEROUS"):
+    for image_name in os.listdir("../Images/NewCroppingMethodv5/Contralateral"):
         if image_name in radio_input_classify.keys():
-            contralateral_with_radiologistInput.append(os.path.join("../Images/CONTRALATERAL BREAST TO CANCEROUS", image_name))
+            contralateral_with_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Contralateral", image_name))
         else:
-            contralateral_without_radiologistInput.append(os.path.join("../Images/CONTRALATERAL BREAST TO CANCEROUS", image_name))
+            contralateral_without_radiologistInput.append(os.path.join("../Images/NewCroppingMethodv5/Contralateral", image_name))
         contralateral_count = contralateral_count + 1
 
     normal_needed = normal_count * split_proportion
@@ -501,7 +501,7 @@ def trainTestSplitWithRadioInput():
         im_location = normal_with_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/NormalTest/", im_name + ".png"))
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTest/", im_name + ".png"))
         normal_selected = normal_selected + 1
     while len(normal_with_radiologistInput) > 0:
         normal_without_radiologistInput.append(normal_with_radiologistInput.pop(0))
@@ -509,15 +509,15 @@ def trainTestSplitWithRadioInput():
         im_location = normal_without_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/NormalTrain/", im_name + ".png"))
-    print(str(normal_selected) + " normal images with radiologist input saved to ../Images/CherryPickedWithRadiologistInput/NormalTest")
-    print(str(normal_count - normal_selected) + " normal images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInput/NormalTrain")
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTrain/", im_name + ".png"))
+    print(str(normal_selected) + " normal images with radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTest")
+    print(str(normal_count - normal_selected) + " normal images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTrain")
 
     while abnormal_selected < abnormal_needed and len(abnormal_with_radiologistInput) > 0:
         im_location = abnormal_with_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/AbnormalTest/", im_name + ".png"))
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest/", im_name + ".png"))
         abnormal_selected = abnormal_selected + 1
     while len(abnormal_with_radiologistInput) > 0:
         abnormal_without_radiologistInput.append(abnormal_with_radiologistInput.pop(0))
@@ -525,15 +525,15 @@ def trainTestSplitWithRadioInput():
         im_location = abnormal_without_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/AbnormalTrain/", im_name + ".png"))
-    print(str(abnormal_selected) + " abnormal images with radiologist input saved to ../Images/CherryPickedWithRadiologistInput/AbnormalTest")
-    print(str(abnormal_count - abnormal_selected) + " abnormal images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInput/AbnormalTrain")
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTrain/", im_name + ".png"))
+    print(str(abnormal_selected) + " abnormal images with radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest")
+    print(str(abnormal_count - abnormal_selected) + " abnormal images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTrain")
 
     while contralateral_selected < contralateral_needed and len(contralateral_with_radiologistInput) > 0:
         im_location = contralateral_with_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/ContralateralTest/", im_name + ".png"))
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTest/", im_name + ".png"))
         contralateral_selected = contralateral_selected + 1
     while len(contralateral_with_radiologistInput) > 0:
         contralateral_without_radiologistInput.append(contralateral_with_radiologistInput.pop(0))
@@ -541,11 +541,11 @@ def trainTestSplitWithRadioInput():
         im_location = contralateral_without_radiologistInput.pop(0)
         im_name = im_location.split("\\")[1].split(".")[0]
         im = Image.open(im_location)        
-        im.save(os.path.join("../Images/CherryPickedWithRadiologistInput/ContralateralTrain/", im_name + ".png"))
-    print(str(contralateral_selected) + " contralateral images with radiologist input saved to ../Images/CherryPickedWithRadiologistInput/ContralateralTest")
-    print(str(contralateral_count - contralateral_selected) + " contralateral images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInput/ContralateralTrain")
+        im.save(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTrain/", im_name + ".png"))
+    print(str(contralateral_selected) + " contralateral images with radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTest")
+    print(str(contralateral_count - contralateral_selected) + " contralateral images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTrain")
 
-
+trainTestSplitWithRadioInput()
 #cropImageTest("../Images/CANCER/AD22_L.bmp", "test_final_masked.png")
 #cropAllImagesInDirToDir("../Images/CANCER", "../Images/Cropped/Cancer_newfilters")
 #createRotatedAndMirroredImages("../Images/CANCER", "../Images/FlippedAndRotated/Cancer")

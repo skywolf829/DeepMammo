@@ -227,6 +227,7 @@ def clean_canny(im, start, end):
             if im[y, x] != 0 and im[y, x-1] != 0 and im[y, x+1] != 0:
                 im[y, x-1] = 0
                 im[y, x+1] = 0
+                
     """
     # Remove diagonal lines
     for y in range(1, im.shape[0]-1):
@@ -245,7 +246,7 @@ def clean_canny(im, start, end):
                 bot_right = count_bot_right_neighbors(im, (y, x))
                 if len(bot_right) >= 3:
                     im[y+1, x+1] = 0     
-                    """
+          """       
     components = return_connected_components(im)
     x_int = end[1]
     im_before_component_removal = im.copy()
@@ -356,6 +357,114 @@ def pick_best_component(edges):
             pectoral_boundary = None
     return pectoral_boundary
 
+def grow_boundaryv2(im, original, component, start, end):
+    new_im = im.copy()
+    if start == None or end == None:
+        return im
+    ends = []
+    for item in component:
+        if len(get_nonzero_neighbors(im, item)) <= 2:
+            ends.append(item)
+    if len(ends) > 2:
+        ends = find_greatest_dist(ends)
+    segment_start = None
+    segment_end = None
+    if ends[0][0] > ends[1][0]:
+        segment_start = ends[0]
+        segment_end = ends[1]
+    else:
+        segment_start = ends[1]
+        segment_end = ends[0]
+    
+    new_points = []
+    grow_up_points = [segment_end]
+    grow_down_points = [segment_start]
+    spot_to_grow = segment_end
+    # grow up
+    maxX = 0
+    if start is not None:
+        maxX = max([maxX, start[1]])
+    if end is not None:
+        maxX = max([maxX, end[1]])
+    
+    starting_intensity = (get_avg_intensity(original, segment_start, 9) + get_avg_intensity(original, segment_end, 9)) / 2
+    while spot_to_grow[0] > 4:
+        best_spot = spot_to_grow[1]
+        best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]-4, spot_to_grow[1]), 9))
+        for i in range(spot_to_grow[1]-4, spot_to_grow[1]+4):
+            if i >= 0 and i < im.shape[1] and i < maxX:
+                spot_intensity = get_avg_intensity(original, (spot_to_grow[0]-4, i), 9)
+                diff = abs(starting_intensity - spot_intensity)
+                if diff < best_diff:
+                    best_diff = diff
+                    best_spot = i
+        new_points.append((max([spot_to_grow[0]-4, 0]), best_spot))
+        spot_to_grow = (max([spot_to_grow[0]-4, 0]), best_spot)
+        grow_up_points.append((max([spot_to_grow[0]-4, 0]), best_spot))
+    if(spot_to_grow[0] <= 4 and spot_to_grow[0] > 0):
+        grow_up_points.append((0, grow_up_points[len(grow_up_points)-1][1]))
+        new_points.append((0, grow_up_points[len(grow_up_points)-1][1]))
+
+
+    spot_to_grow = segment_start
+    # grow down
+    starting_intensity = (get_avg_intensity(original, segment_start, 9) + get_avg_intensity(original, segment_end, 9)) / 2
+    while spot_to_grow[1] > 4 and spot_to_grow[0] < im.shape[0] - 1 - 4:
+        best_spot = spot_to_grow[1]
+        best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]+4, spot_to_grow[1]), 9))
+        for i in range(spot_to_grow[1]-4, spot_to_grow[1]+4):
+            if i >= 0 and i < im.shape[1] and i < maxX:
+                spot_intensity = get_avg_intensity(original, (spot_to_grow[0]+4, i), 9)
+                diff = abs(starting_intensity - spot_intensity)
+                if diff < best_diff:
+                    best_diff = diff
+                    best_spot = i
+        new_points.append((min([spot_to_grow[0]+4, im.shape[0]-1]), best_spot))
+        spot_to_grow = (min([spot_to_grow[0]+4, im.shape[0]-1]), best_spot)
+        grow_down_points.append((min([spot_to_grow[0]+4, im.shape[0]-1]), best_spot))
+
+    if(spot_to_grow[0] > im.shape[0] - 1 - 4 and spot_to_grow[0] < im.shape[0] - 1):
+        grow_down_points.append((im.shape[0]-1, grow_down_points[len(grow_down_points)-1][1]))
+        new_points.append((im.shape[0]-1, grow_down_points[len(grow_down_points)-1][1]))
+
+    #for item in new_points:
+    #    new_im[item[0], item[1]] = 1
+    if DEBUG:
+        cv2.imshow("pre-joining", new_im)
+    for i in range(len(grow_up_points)-1):
+        new_im = connect_two_points(new_im, [grow_up_points[i], grow_up_points[i+1]])        
+    for i in range(len(grow_down_points)-1):
+        new_im = connect_two_points(new_im, [grow_down_points[i], grow_down_points[i+1]])
+    return new_im
+
+def connect_two_points(im, points):
+    """
+    m_inv = None
+    if points[1][0] != points[0][0]:
+        m_inv = (points[1][1] - points[0][1]) / (points[1][0] - points[0][0]) 
+    
+    for i in range(1, abs(points[1][0] - points[0][0])):
+        x_spot = points[1][1]
+        if m_inv is not None:
+            x_spot = int(m_inv * i) + points[1][1]
+        im[i+points[1][0], x_spot] = 1
+        """
+    iters = 10
+    for i in range(0, iters):
+        spot = lerp(points[0], points[1], i / iters).astype(np.uint8())
+        im[spot[0], spot[1]] = 1
+    return im
+
+def lerp(a, b, p):
+    result = None
+    if len(a) > 1:
+        result = []
+        for i in range(len(a)):
+            result.append(a[i] + (b[i] - a[i]) * p)
+    else:
+        result = a + (b-a)*p
+    return np.array(result)
+
 def grow_boundary(im, original, component, start, end):
     new_im = im.copy()
     if start == None or end == None:
@@ -383,8 +492,9 @@ def grow_boundary(im, original, component, start, end):
         maxX = max([maxX, start[1]])
     if end is not None:
         maxX = max([maxX, end[1]])
+    
+    starting_intensity = get_avg_intensity(original, spot_to_grow, 9)
     while spot_to_grow[0] != 0:
-        starting_intensity = get_avg_intensity(original, spot_to_grow, 9)
         best_spot = spot_to_grow[1]
         best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]-1, spot_to_grow[1]), 9))
         for i in range(spot_to_grow[1]-2, spot_to_grow[1]+2):
@@ -399,8 +509,8 @@ def grow_boundary(im, original, component, start, end):
     
     spot_to_grow = segment_start
     # grow down
+    starting_intensity = get_avg_intensity(original, spot_to_grow, 9)
     while spot_to_grow[1] != 0 and spot_to_grow[0] != im.shape[0] - 1:
-        starting_intensity = get_avg_intensity(original, spot_to_grow, 9)
         best_spot = spot_to_grow[1]
         best_diff = abs(starting_intensity - get_avg_intensity(original, (spot_to_grow[0]+1, spot_to_grow[1]), 9))
         for i in range(spot_to_grow[1]-2, spot_to_grow[1]+2):
@@ -433,12 +543,21 @@ def get_avg_intensity(im, spot, boxsize):
 def fill_image(im):
     img = im.copy()
     for i in range(img.shape[0]):
+        switch_spots = [0]
         j = 0
-        while j < img.shape[1] and img[i,j] == 0:
+        last_color = 0
+        while j < img.shape[1]:
+            if img[i,j] != last_color:
+                switch_spots.append(j)
+            
+            last_color = img[i,j]
             j = j + 1
-        if j < img.shape[1]:
-            for k in range(j):
-                img[i,k] = 1
+        if len(switch_spots) > 1:
+            color = 1
+            for index in range(len(switch_spots)-1):
+                for k in range(switch_spots[index], switch_spots[index+1]):
+                    img[i,k] = color
+                color = 1 - color
     return img
 
 def finalize_boundary(edges, original, start, end):
@@ -454,7 +573,7 @@ def finalize_boundary(edges, original, start, end):
     if DEBUG:
         cv2.imshow("finalcomponent",im)
     
-    im = grow_boundary(im, original, component, start, end)
+    im = grow_boundaryv2(im, original, component, start, end)
     
     if DEBUG:
         cv2.imshow("finalgrowth",im)
@@ -500,6 +619,7 @@ def save_all_crops(dir, saveDir):
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
 
 DEBUG = False
-save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv2/Contralateral/")
-save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv2/Normal/")
-save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv2/Cancer/")
+#segment_pectoral_from_breast("../Images/CONTRALATERAL BREAST TO CANCEROUS/AD47_L.bmp")
+save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv5/Contralateral/")
+save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv5/Normal/")
+save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv5/Cancer/")

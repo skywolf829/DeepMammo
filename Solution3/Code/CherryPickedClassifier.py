@@ -36,11 +36,11 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTrain",), (0,))
-images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTest",), (0,))
-images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTrain",), (1,))
-images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTest",), (1,))
-images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/ContralateralTest",), (0,))
+images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTrain",), (0,))
+images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTest",), (0,))
+images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTrain",), (1,))
+images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest",), (1,))
+images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTest",), (0,))
 names_all = np.append(np.append(np.append(names_normal_train, names_normal_test, axis=0), names_abnormal_train, axis=0), names_abnormal_test, axis=0)
 labels_all = np.append(np.append(np.append(labels_normal_train, labels_normal_test, axis=0), labels_abnormal_train, axis=0), labels_abnormal_test, axis=0)
 
@@ -167,15 +167,17 @@ for name in names_all:
 with open('js/VisualizationInformation.txt', 'w') as json_file:
     json.dump(json_dict, json_file)
 
-#utility_functions.printListInOrder(names_contralateral_test)
+#utility_functions.printListInOrder(y_test)
 #print("break")
-#utility_functions.printDictionaryInOrder(names_contralateral_test, model_classification_contralateral)
+#utility_functions.printDictionaryInOrder(names_test, radio_input_classify)
 #print("break")
-#utility_functions.printDictionaryInOrder(names_contralateral_test, model_confidence_contralateral)
+#utility_functions.printDictionaryInOrder(names_test, radio_input_confidence)
 
 
-
-fpr, tpr, thresholds = roc_curve(y_test, confidence_values)
+radio_confidence = []
+for name in names_test:
+    radio_confidence.append(radio_input_classify[name])
+fpr, tpr, thresholds = roc_curve(y_test, radio_confidence)
 roc_auc = auc(fpr, tpr)
 print("AUC: " + str(roc_auc))
 
@@ -192,10 +194,10 @@ for i in range(len(names_test)):
         else:
             confidence_values_radiologist.append(radio_input_confidence[names_test[i]])
 scaler = MinMaxScaler(feature_range=(-1, 1))
-confidence_values_model = scaler.fit_transform(np.array(confidence_values_model).reshape(-1, 1)).reshape(-1)
+#confidence_values_model = scaler.fit_transform(np.array(confidence_values_model).reshape(-1, 1)).reshape(-1)
 r, p = scipy.stats.pearsonr(confidence_values_model, confidence_values_radiologist)
 print("Pearson r: " + str(r) + ", p-value: " + str(p))
-"""
+
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
 plt.legend(loc='lower right', fontsize='x-large')
@@ -207,7 +209,7 @@ plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
 plt.show()
 
-"""
+
 """
 
 The following code is to add a voting system in hopes to increase accuracy
@@ -245,7 +247,7 @@ plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
 plt.show()
-#utility_functions.printListInOrder(names_test)
+#utility_functions.printListInOrder(confidence_values)
 #print("break")
 #utility_functions.printListInOrder(predictions)
 
