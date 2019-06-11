@@ -193,8 +193,8 @@ for i in range(len(names_test)):
             confidence_values_radiologist.append(-radio_input_confidence[names_test[i]])
         else:
             confidence_values_radiologist.append(radio_input_confidence[names_test[i]])
-scaler = MinMaxScaler(feature_range=(-1, 1))
-#confidence_values_model = scaler.fit_transform(np.array(confidence_values_model).reshape(-1, 1)).reshape(-1)
+scaler = MinMaxScaler(feature_range=(0, 1))
+confidence_values_model = scaler.fit_transform(np.array(confidence_values_model).reshape(-1, 1)).reshape(-1)
 r, p = scipy.stats.pearsonr(confidence_values_model, confidence_values_radiologist)
 print("Pearson r: " + str(r) + ", p-value: " + str(p))
 
