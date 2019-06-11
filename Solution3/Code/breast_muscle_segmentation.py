@@ -619,7 +619,7 @@ def save_all_crops(dir, saveDir):
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
 
 DEBUG = True
-segment_pectoral_from_breast("../Images/NORMAL/N40_R.bmp")
+#segment_pectoral_from_breast("../Images/NORMAL/N40_R.bmp")
 #save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv5/Contralateral/")
 #save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv5/Normal/")
 #save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv5/Cancer/")

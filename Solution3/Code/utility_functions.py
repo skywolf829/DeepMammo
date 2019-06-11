@@ -545,7 +545,7 @@ def trainTestSplitWithRadioInput():
     print(str(contralateral_selected) + " contralateral images with radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTest")
     print(str(contralateral_count - contralateral_selected) + " contralateral images with/without radiologist input saved to ../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTrain")
 
-trainTestSplitWithRadioInput()
+#trainTestSplitWithRadioInput()
 #cropImageTest("../Images/CANCER/AD22_L.bmp", "test_final_masked.png")
 #cropAllImagesInDirToDir("../Images/CANCER", "../Images/Cropped/Cancer_newfilters")
 #createRotatedAndMirroredImages("../Images/CANCER", "../Images/FlippedAndRotated/Cancer")

@@ -16,7 +16,7 @@ images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functi
 def compute_feats(image, kernels):
     feats = np.zeros((len(kernels), 2), dtype=np.double)
     for k, kernel in enumerate(kernels):
-        filtered = ndi.convolve(np.array(image), kernel, mode='wrap')
+        filtered = ndi.convolve(image, kernel, mode='wrap')
         feats[k, 0] = filtered.mean()
         feats[k, 1] = filtered.var()
     return feats
@@ -41,8 +41,10 @@ for theta in range(16):
         for frequency in (0.05, 0.25):
             kernel = np.real(gabor_kernel(frequency, theta=theta,
                                           sigma_x=sigma, sigma_y=sigma))
+            print("Kernel ")
+            print(kernel)
             kernels.append(kernel)
-
+print(np.array(kernels).shape)
 shrink = (slice(0, None, 3), slice(0, None, 3))
 
 # prepare reference features
