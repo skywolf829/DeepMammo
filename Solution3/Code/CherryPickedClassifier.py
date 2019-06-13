@@ -36,11 +36,11 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTrain",), (0,))
-images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTest",), (0,))
-images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTrain",), (1,))
-images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest",), (1,))
-images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputCroppedv5/ContralateralTest",), (0,))
+images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTrain",), (0,))
+images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTest",), (0,))
+images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTrain",), (1,))
+images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTest",), (1,))
+images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/ContralateralTest",), (0,))
 names_all = np.append(np.append(np.append(names_normal_train, names_normal_test, axis=0), names_abnormal_train, axis=0), names_abnormal_test, axis=0)
 labels_all = np.append(np.append(np.append(labels_normal_train, labels_normal_test, axis=0), labels_abnormal_train, axis=0), labels_abnormal_test, axis=0)
 
@@ -97,6 +97,36 @@ y_test = np.append(labels_normal_test, labels_abnormal_test, axis=0)
 
 names_train = np.append(names_normal_train, names_abnormal_train, axis=0)
 names_test = np.append(names_normal_test, names_abnormal_test, axis=0)
+
+C_values = [100, 50, 10, 5, 1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001, 0.000005, 0.000001]
+C_value_scores = []
+for spot in range(len(C_values)):
+    clf = LinearSVC(C=C_values[spot])
+    kFolds = 5
+    iterations = 1000
+    random_state = 4597834
+    i = 0
+    averageScore = 0
+    rollingAverage = 0
+    rkf = RepeatedKFold(n_splits=kFolds, n_repeats=iterations, random_state=random_state)
+
+    for train_index, test_index in rkf.split(X_train):
+        X_train_CV, X_test_CV = X_train[train_index], X_train[test_index]
+        y_train_CV, y_test_CV = y_train[train_index], y_train[test_index]
+        clf.fit(X_train_CV, y_train_CV)
+        score = clf.score(X_test_CV, y_test_CV)
+        averageScore = averageScore + score
+        rollingAverage = rollingAverage + score
+        i = i + 1
+        if i % kFolds == 0:
+            print("Average for " + str(kFolds) + "-split " + str(i / kFolds) + ": " + str (rollingAverage / kFolds))
+            rollingAverage = 0
+
+    averageScore = averageScore / i
+
+    print("Average score: " + str(averageScore))
+    C_value_scores.append(averageScore)
+print(C_value_scores)
 
 clf.fit(X_train, y_train)
 score = clf.score(X_test, y_test)

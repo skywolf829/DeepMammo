@@ -7,13 +7,15 @@ from skimage import data
 from skimage.util import img_as_float
 from skimage.filters import gabor_kernel
 import utility_functions
+from sklearn.metrics import accuracy_score, confusion_matrix, auc, roc_curve
 
 image_names_train = []
 image_names_test = []
 labels_train = []
 labels_test = []
+predictions = []
 feature_vectors = []
-filtered_imgs=[]
+filtered_imgs = []
 filters = []
 
 def find_min_dist_feat(feat_vec):
@@ -64,6 +66,7 @@ for item in os.listdir("../Images/CherryPickedWithRadiologistInputCroppedv5/Norm
     img = cv2.imread(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/NormalTest", item))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     image_names_test.append(item)
+    labels_test.append(0)
     feat_vec = []
     for i in range(len(filters)):
         filtered_img = cv2.filter2D(img, cv2.CV_8UC3, filters[i])
@@ -71,14 +74,15 @@ for item in os.listdir("../Images/CherryPickedWithRadiologistInputCroppedv5/Norm
         feat_vec.append(filtered_img.std())
     closest_index = find_min_dist_feat(feat_vec)
     if image_names_train[closest_index][:1] == "N":
-        labels_test.append(0)
+        predictions.append(0)
     else:
-        labels_test.append(1)
+        predictions.append(1)
 
 for item in os.listdir("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest"):
     img = cv2.imread(os.path.join("../Images/CherryPickedWithRadiologistInputCroppedv5/AbnormalTest", item))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     image_names_test.append(item)
+    labels_test.append(1)
     feat_vec = []
     for i in range(len(filters)):
         filtered_img = cv2.filter2D(img, cv2.CV_8UC3, filters[i])
@@ -86,10 +90,10 @@ for item in os.listdir("../Images/CherryPickedWithRadiologistInputCroppedv5/Abno
         feat_vec.append(filtered_img.std())
     closest_index = find_min_dist_feat(feat_vec)
     if image_names_train[closest_index][:1] == "N":
-        labels_test.append(0)
+        predictions.append(0)
     else:
-        labels_test.append(1)
+        predictions.append(1)
 
-utility_functions.printListInOrder(image_names_test)
-print("break")
-utility_functions.printListInOrder(labels_test)
+fpr, tpr, thresholds = roc_curve(labels_test, predictions)
+roc_auc = auc(fpr, tpr)
+print(roc_auc)
