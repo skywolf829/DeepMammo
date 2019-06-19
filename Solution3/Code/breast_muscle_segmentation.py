@@ -618,8 +618,69 @@ def save_all_crops(dir, saveDir):
         short_name = im_name.split(".")[0]
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
 
-DEBUG = True
+def rectangle_cut_crop_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))
+        mask, bbox = breast_segment(im_og, scale_factor=1)
+        if DEBUG:
+            cv2.imshow("FirstMask", mask.astype(np.uint8))
+        im_og = np.multiply(im_og, mask)
+        im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        im[0:int(im.shape[0]/2),0:int(im.shape[1]/4)] = 0
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+def mid_cut_crop_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))
+        mask, bbox = breast_segment(im_og, scale_factor=1)
+        if DEBUG:
+            cv2.imshow("FirstMask", mask.astype(np.uint8))
+        im_og = np.multiply(im_og, mask)
+        im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        im[int(im.shape[0]/6):int(5*im.shape[0]/6),int(im.shape[1]/6):int(5*im.shape[1]/6)] = 0
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+def all_black_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))
+        mask, bbox = breast_segment(im_og, scale_factor=1)
+        if DEBUG:
+            cv2.imshow("FirstMask", mask.astype(np.uint8))
+        im_og = np.multiply(im_og, mask)
+        im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        im[:,:] = 0
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+
+def all_white_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))
+        mask, bbox = breast_segment(im_og, scale_factor=1)
+        if DEBUG:
+            cv2.imshow("FirstMask", mask.astype(np.uint8))
+        im_og = np.multiply(im_og, mask)
+        im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        im[:,:] = 1
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+
+def no_crop_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))        
+        im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+
+
+DEBUG = False
 #segment_pectoral_from_breast("../Images/NORMAL/N40_R.bmp")
 #save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv5/Contralateral/")
 #save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv5/Normal/")
 #save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv5/Cancer/")
+
+all_black_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/AllBlackForAnalysis/Contralateral/")
+all_black_for_analysis("../Images/NORMAL/", "../Images/AllBlackForAnalysis/Normal/")
+all_black_for_analysis("../Images/CANCER/", "../Images/AllBlackForAnalysis/Cancer/")
+all_white_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/AllWhiteForAnalysis/Contralateral/")
+all_white_for_analysis("../Images/NORMAL/", "../Images/AllWhiteForAnalysis/Normal/")
+all_white_for_analysis("../Images/CANCER/", "../Images/AllWhiteForAnalysis/Cancer/")

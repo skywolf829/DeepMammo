@@ -20,7 +20,7 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.manifold import TSNE
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score, confusion_matrix, auc, roc_curve
+from sklearn.metrics import accuracy_score, confusion_matrix, auc, roc_curve, mean_absolute_error
 import argparse
 import tensorflowvgg.vgg19 as vgg19
 import utility_functions
@@ -36,11 +36,11 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTrain",), (0,))
-images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/NormalTest",), (0,))
-images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTrain",), (1,))
-images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/AbnormalTest",), (1,))
-images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInput/ContralateralTest",), (0,))
+images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/NormalTrain",), (0,))
+images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/NormalTest",), (0,))
+images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/AbnormalTrain",), (1,))
+images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/AbnormalTest",), (1,))
+images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/ContralateralTest",), (0,))
 names_all = np.append(np.append(np.append(names_normal_train, names_normal_test, axis=0), names_abnormal_train, axis=0), names_abnormal_test, axis=0)
 labels_all = np.append(np.append(np.append(labels_normal_train, labels_normal_test, axis=0), labels_abnormal_train, axis=0), labels_abnormal_test, axis=0)
 
@@ -66,6 +66,7 @@ codes_contralateral = sess.run(vgg.relu6, feed_dict=feed_dict_contralateral)
 sess.close()
 
 """ next block is for TSNE plot """
+
 codes_all = np.append(np.append(np.append(codes_normal_train, codes_normal_test, axis=0), codes_cancer_train, axis=0), codes_cancer_test, axis=0)
 #codes_all = PCA(n_components=50).fit_transform(codes_all)
 tsne_embedding = TSNE(n_components=2, perplexity=5).fit_transform(codes_all)
@@ -76,6 +77,7 @@ for name in names_all:
     json_dict[name]["position"] = tsne_embedding[i].tolist()
     json_dict[name]["label"] = str(labels_all[i])
     i = i + 1
+"""
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 ax.scatter(tsne_embedding[0:len(codes_normal_train)+len(codes_normal_test),0], tsne_embedding[0:len(codes_normal_train)+len(codes_normal_test),1], edgecolors='none', c="blue", label="normal")
@@ -85,7 +87,7 @@ plt.title("t-sne embedding")
 plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
 plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
 plt.show()
-
+"""
 
 clf = LinearSVC(C=0.0001)
 
@@ -97,13 +99,13 @@ y_test = np.append(labels_normal_test, labels_abnormal_test, axis=0)
 
 names_train = np.append(names_normal_train, names_abnormal_train, axis=0)
 names_test = np.append(names_normal_test, names_abnormal_test, axis=0)
-
-C_values = [100, 50, 10, 5, 1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001, 0.000005, 0.000001]
+"""
+C_values = [1000000, 500000, 100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10, 5, 1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001, 0.000005, 0.000001]
 C_value_scores = []
 for spot in range(len(C_values)):
     clf = LinearSVC(C=C_values[spot])
     kFolds = 5
-    iterations = 1000
+    iterations = 50
     random_state = 4597834
     i = 0
     averageScore = 0
@@ -127,11 +129,15 @@ for spot in range(len(C_values)):
     print("Average score: " + str(averageScore))
     C_value_scores.append(averageScore)
 print(C_value_scores)
-
+"""
 clf.fit(X_train, y_train)
 score = clf.score(X_test, y_test)
-print("Final score: " + str(score))
-print("Overall score: " + str(clf.score(np.append(X_train, X_test, axis=0), np.append(y_train, y_test, axis=0))))
+fpr, tpr, thresholds = roc_curve(y_test, clf.decision_function(X_test))
+roc_auc = auc(fpr, tpr)
+print("AUC for model: " + str(roc_auc))
+print("Stdev for AUC: " + str())
+print("Final accuracy for model: " + str(score))
+#print("Overall score: " + str(clf.score(np.append(X_train, X_test, axis=0), np.append(y_train, y_test, axis=0))))
 
 
 model_confidence = {}
@@ -209,7 +215,7 @@ for name in names_test:
     radio_confidence.append(radio_input_classify[name])
 fpr, tpr, thresholds = roc_curve(y_test, radio_confidence)
 roc_auc = auc(fpr, tpr)
-print("AUC: " + str(roc_auc))
+print("AUC for radiologists: " + str(roc_auc))
 
 confidence_values_model = []
 confidence_values_radiologist = []
@@ -226,7 +232,7 @@ for i in range(len(names_test)):
 scaler = MinMaxScaler(feature_range=(0, 1))
 confidence_values_model = scaler.fit_transform(np.array(confidence_values_model).reshape(-1, 1)).reshape(-1)
 r, p = scipy.stats.pearsonr(confidence_values_model, confidence_values_radiologist)
-print("Pearson r: " + str(r) + ", p-value: " + str(p))
+#print("Pearson r: " + str(r) + ", p-value: " + str(p))
 
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
@@ -263,10 +269,10 @@ for i in range(len(names_test)):
     if predictions[i] == y_test[i]:
         numCorrect = numCorrect + 1
 newAccuracy = float(numCorrect) / len(names_test)
-print("Human input accuracy: " + str(newAccuracy))
+print("Voting system accuracy: " + str(newAccuracy))
 fpr, tpr, thresholds = roc_curve(y_test, confidence_values)
 roc_auc = auc(fpr, tpr)
-print("New AUC: "+str(roc_auc))
+print("Voting system AUC: "+str(roc_auc))
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
 plt.legend(loc='lower right', fontsize='x-large')
@@ -277,7 +283,10 @@ plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
 plt.show()
-#utility_functions.printListInOrder(confidence_values)
-#print("break")
-#utility_functions.printListInOrder(predictions)
 
+
+utility_functions.printListInOrder(predictions)
+print("break")
+utility_functions.printDictionaryInOrder(names_test, model_confidence)
+print("break")
+utility_functions.printDictionaryInOrder(names_test, model_classification)
