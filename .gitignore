@@ -125,8 +125,10 @@ Solution3/Images/CherryPickedWithRadiologistInputManualCrop/
 Solution3/Images/CherryPickedWithRadiologistInputMidCrop/
 Solution3/Images/CherryPickedWithRadiologistInputNoCrop/
 Solution3/Images/CherryPickedWithRadiologistInputRectangleCropped/
+Solution3/Images/CherryPickedWithRadiologistInputRandomRectCropped/
 Solution3/Images/MidCropForAnalysis/
 Solution3/Images/NoCropForAnalysis/
+Solution3/Images/RandomRectCropForAnalysis/
 Solution3/Images/RectangleCutCropForAnalysis/
 Solution3/Images/AllBlackForAnalysis/
 Solution3/Images/AllWhiteForAnalysis/

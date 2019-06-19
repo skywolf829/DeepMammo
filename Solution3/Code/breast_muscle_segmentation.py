@@ -641,6 +641,22 @@ def mid_cut_crop_for_analysis(dir, saveDir):
         im[int(im.shape[0]/6):int(5*im.shape[0]/6),int(im.shape[1]/6):int(5*im.shape[1]/6)] = 0
         short_name = im_name.split(".")[0]
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+def random_rect_crop_for_analysis(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im_og, side = load_im(os.path.join(dir, im_name))
+        mask, bbox = breast_segment(im_og, scale_factor=1)
+        if DEBUG:
+            cv2.imshow("FirstMask", mask.astype(np.uint8))
+        im_og = np.multiply(im_og, mask)
+        im = np.array(PIL.Image.fromarray(im_og))#.resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+        startX = random.randrange(0, im.shape[1]-1)
+        endX = random.randrange(startX, im.shape[1]-1)
+        startY = random.randrange(0, im.shape[0]-1)
+        endY = random.randrange(startY, im.shape[0]-1)
+        im[startY:endY,startX:endX] = 0
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+
 def all_black_for_analysis(dir, saveDir):
     for im_name in os.listdir(dir):
         im_og, side = load_im(os.path.join(dir, im_name))
@@ -698,3 +714,7 @@ DEBUG = False
 #rectangle_cut_crop_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/RectangleCutCropForAnalysis/Contralateral/")
 #rectangle_cut_crop_for_analysis("../Images/NORMAL/", "../Images/RectangleCutCropForAnalysis/Normal/")
 #rectangle_cut_crop_for_analysis("../Images/CANCER/", "../Images/RectangleCutCropForAnalysis/Cancer/")
+
+random_rect_crop_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/RandomRectCropForAnalysis/Contralateral/")
+random_rect_crop_for_analysis("../Images/NORMAL/", "../Images/RandomRectCropForAnalysis/Normal/")
+random_rect_crop_for_analysis("../Images/CANCER/", "../Images/RandomRectCropForAnalysis/Cancer/")
