@@ -36,11 +36,11 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/NormalTrain",), (0,))
-images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/NormalTest",), (0,))
-images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/AbnormalTrain",), (1,))
-images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/AbnormalTest",), (1,))
-images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllBlack/ContralateralTest",), (0,))
+images_normal_train, labels_normal_train, names_normal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllWhite/NormalTrain",), (0,))
+images_normal_test, labels_normal_test, names_normal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllWhite/NormalTest",), (0,))
+images_abnormal_train, labels_abnormal_train, names_abnormal_train = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllWhite/AbnormalTrain",), (1,))
+images_abnormal_test, labels_abnormal_test, names_abnormal_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllWhite/AbnormalTest",), (1,))
+images_contralateral_test, labels_contralateral_test, names_contralateral_test = utility_functions.loadImagesFromDir(("../Images/CherryPickedWithRadiologistInputAllWhite/ContralateralTest",), (0,))
 names_all = np.append(np.append(np.append(names_normal_train, names_normal_test, axis=0), names_abnormal_train, axis=0), names_abnormal_test, axis=0)
 labels_all = np.append(np.append(np.append(labels_normal_train, labels_normal_test, axis=0), labels_abnormal_train, axis=0), labels_abnormal_test, axis=0)
 
