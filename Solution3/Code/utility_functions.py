@@ -585,4 +585,4 @@ def trainTestSplitWithRadioInput():
 #createRotatedAndMirroredImages("../Images/CANCER", "../Images/FlippedAndRotated/Cancer")
 #createRotatedAndMirroredImages("../Images/NORMAL", "../Images/FlippedAndRotated/Normal")
 #createRotatedAndMirroredImages("../Images/CONTRALATERAL BREAST TO CANCEROUS", "../Images/FlippedAndRotated/Contralateral")
-trainTestSplitWithRadioInput()
+#trainTestSplitWithRadioInput()
