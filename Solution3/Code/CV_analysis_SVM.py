@@ -36,8 +36,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/NoCropForAnalysis/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/NoCropForAnalysis/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Cancer",), (1,))
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
@@ -58,7 +58,7 @@ sess.close()
 clf = LinearSVC(C=0.0001)
 scores = []
 ROCs = []
-for iteration in range(1000):
+for iteration in range(100):
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=iteration)
     for train_index, test_index in skf.split(codes_all, labels_all):
         X_train, X_test = codes_all[train_index], codes_all[test_index]

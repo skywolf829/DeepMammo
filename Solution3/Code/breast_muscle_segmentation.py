@@ -715,6 +715,6 @@ DEBUG = False
 #rectangle_cut_crop_for_analysis("../Images/NORMAL/", "../Images/RectangleCutCropForAnalysis/Normal/")
 #rectangle_cut_crop_for_analysis("../Images/CANCER/", "../Images/RectangleCutCropForAnalysis/Cancer/")
 
-random_rect_crop_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/RandomRectCropForAnalysis/Contralateral/")
-random_rect_crop_for_analysis("../Images/NORMAL/", "../Images/RandomRectCropForAnalysis/Normal/")
-random_rect_crop_for_analysis("../Images/CANCER/", "../Images/RandomRectCropForAnalysis/Cancer/")
+#random_rect_crop_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/RandomRectCropForAnalysis/Contralateral/")
+#random_rect_crop_for_analysis("../Images/NORMAL/", "../Images/RandomRectCropForAnalysis/Normal/")
+#random_rect_crop_for_analysis("../Images/CANCER/", "../Images/RandomRectCropForAnalysis/Cancer/")
