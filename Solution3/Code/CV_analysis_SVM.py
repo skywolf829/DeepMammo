@@ -129,3 +129,6 @@ lower = max(0.0, np.percentile(ROCs, p))
 p = (alpha+((1.0-alpha)/2.0))*100
 upper = min(1.0, np.percentile(ROCs, p))
 print("95% CI for CV AUC 3: " + str(lower) + " to " + str(upper))
+
+plt.hist(ROCs)
+plt.show()
