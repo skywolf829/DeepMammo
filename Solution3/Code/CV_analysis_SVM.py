@@ -6,9 +6,10 @@ from os.path import isfile, isdir
 import numpy as np
 import tensorflow as tf
 from keras.preprocessing.image import load_img, img_to_array
+from scipy import stats
 from sklearn.svm import SVC, LinearSVC
-from sklearn.model_selection import train_test_split, cross_val_score, ShuffleSplit, cross_val_predict, RepeatedKFold, StratifiedKFold
-from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split, cross_val_score, LeaveOneOut, ShuffleSplit, cross_val_predict, RepeatedKFold, StratifiedKFold, KFold
+from sklearn.utils import shuffle, resample
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -36,8 +37,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Cancer",), (1,))
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
@@ -56,10 +57,14 @@ codes_all = sess.run(vgg.relu6, feed_dict=feed_dict_all)
 sess.close()
 
 clf = LinearSVC(C=0.0001)
+
+
+# For 10-fold CV
+"""
 scores = []
 ROCs = []
-for iteration in range(100):
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=iteration)
+for iteration in range(1000):    
+    skf = KFold(n_splits=10, shuffle=True, random_state=iteration)
     for train_index, test_index in skf.split(codes_all, labels_all):
         X_train, X_test = codes_all[train_index], codes_all[test_index]
         y_train, y_test = labels_all[train_index], labels_all[test_index]
@@ -68,10 +73,59 @@ for iteration in range(100):
         fpr, tpr, thresholds = roc_curve(y_test, clf.decision_function(X_test))
         roc_auc = auc(fpr, tpr)
         ROCs.append(roc_auc)
-        print(str(iteration) + " Score: " + str(scores[len(scores)-1]) + " \t\t\tAUC: " + str(ROCs[len(ROCs)-1]))
+        print(str(iteration) + " AUC: " + str(ROCs[len(ROCs)-1]))
+
+                       
 print("Avg CV score: " + str(np.average(scores)))
-print("STD of CV score: " + str(np.std(scores)))
-print("95% CI for CV score: " + str(np.average(scores) - 1.96 * np.std(scores)) + " to " + str(np.average(scores) + 1.96 * np.std(scores)))
+print("STDev of CV score: " + str(np.std(scores)))
+print("StdErr of CV score: " + str(stats.sem(scores)))
+print("95% CI for CV score: " + str(np.average(scores) - 1.96 * stats.sem(scores)) + " to " + str(np.average(scores) + 1.96 * stats.sem(scores)))
 print("Avg CV AUC: " + str(np.average(ROCs)))
-print("STD of CV AUC: " + str(np.std(ROCs)))
-print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * np.std(ROCs)) + " to " + str(np.average(ROCs) + 1.96 * np.std(ROCs)))
+print("STDev of CV score: " + str(np.std(ROCs)))
+print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
+print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * stats.sem(ROCs)) + " to " + str(np.average(ROCs) + 1.96 * stats.sem(ROCs)))
+
+"""
+# For LOO and Bootstrapping
+
+loo = LeaveOneOut()
+predictions = np.zeros(len(labels_all))
+for train_index, test_index in loo.split(codes_all):   
+    X_train, X_test = codes_all[train_index], codes_all[test_index]
+    y_train, y_test = labels_all[train_index], labels_all[test_index]
+    clf.fit(X_train, y_train)
+    predictions[test_index] = clf.predict(X_test)
+fpr, tpr, thresholds = roc_curve(labels_all, predictions)
+roc_auc = auc(fpr, tpr)
+
+ROCs = []
+for iteration in range(1000):
+    indices = resample(range(len(predictions)), random_state=iteration)
+    sample_predictions = predictions[indices]
+    sample_labels = labels_all[indices]
+    fpr, tpr, thresholds = roc_curve(sample_labels, sample_predictions)
+    roc_auc_sample = auc(fpr, tpr)
+    ROCs.append(roc_auc_sample)
+    print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
+
+
+print("Initial AUC: " + str(roc_auc))
+print("Avg AUC: " + str(np.average(ROCs)))
+print("STDev of CV AUC: " + str(np.std(ROCs)))
+print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
+# Method 1, direct CI computation
+print("95% CI for CV AUC 1: " + str(roc_auc - 1.96 * stats.sem(ROCs)) + " to " + str(roc_auc + 1.96 * stats.sem(ROCs)))
+# Method 2, implicit CI from the sorted scores 
+sorted_scores = np.array(ROCs)
+sorted_scores.sort()
+confidence_lower = sorted_scores[int(0.025 * len(ROCs))]
+confidence_upper = sorted_scores[int(0.975 * len(ROCs))]
+print("95% CI for CV AUC 2: " + str(confidence_lower) + " to " + str(confidence_upper))
+
+# Method 3 from https://machinelearningmastery.com/calculate-bootstrap-confidence-intervals-machine-learning-results-python/
+alpha = 0.95
+p = ((1.0-alpha)/2.0)*100
+lower = max(0.0, np.percentile(ROCs, p))
+p = (alpha+((1.0-alpha)/2.0))*100
+upper = min(1.0, np.percentile(ROCs, p))
+print("95% CI for CV AUC 3: " + str(lower) + " to " + str(upper))
