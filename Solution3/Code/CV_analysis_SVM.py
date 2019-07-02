@@ -39,21 +39,32 @@ radio_input_classify, radio_input_confidence = utility_functions.loadRadiologist
 
 images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Normal",), (0,))
 images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Cancer",), (1,))
+# If only using images that have radiologist response
+i = 0
+while i < len(names_normal):
+    if names_normal[i] not in radio_input_classify.keys():
+        names_normal.pop(i)
+        labels_normal.pop(i)
+        images_normal.pop(i)
+    else:
+        i = i + 1
+i = 0
+
+
+while i < len(names_cancer):
+    if names_cancer[i] not in radio_input_classify.keys():
+        names_cancer.pop(i)
+        labels_cancer.pop(i)
+        images_cancer.pop(i)
+    else:
+        i = i + 1
+
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
 
 
-# If only using images that have radiologist response
-i = 0
-while i < len(names_all):
-    if names_all[i] not in radio_input_classify.keys():
-        names_all = np.delete(names_all, i, axis=0)
-        labels_all = np.delete(labels_all, i, axis=0)
-        images_all = np.delete(images_all, i, axis=0)
-        #print("deleting " + str(i))
-    else:
-        i = i + 1
+
 
 sess = tf.Session()
 print("Session start")
@@ -64,9 +75,27 @@ with tf.name_scope("content_vgg"):
     vgg.build(input_)
 # Get the values from the relu6 layer of the VGG network
 feed_dict_all = {input_: images_all}
-codes_all = sess.run(vgg.relu6, feed_dict=feed_dict_all)
-
+feed_dict_normal = {input_: images_normal}
+feed_dict_cancer = {input_: images_cancer}
+codes_normal = sess.run(vgg.relu6, feed_dict=feed_dict_normal)
+codes_cancer = sess.run(vgg.relu6, feed_dict=feed_dict_cancer)
+codes_all = np.append(codes_normal, codes_cancer, axis=0)
 sess.close()
+
+# Creates a TSNE plot for the deep features generated
+pca_50 = PCA(n_components=50)
+pca_codes = pca_50.fit_transform(codes_all)
+tsne_embedding = TSNE(n_components=2, perplexity=20, init='random', random_state=0).fit_transform(pca_codes)
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.scatter(tsne_embedding[0:len(codes_normal),0], tsne_embedding[0:len(codes_normal),1], edgecolors='none', c="blue", label="normal")
+ax.scatter(tsne_embedding[len(codes_normal):,0], tsne_embedding[len(codes_normal):,1], edgecolors='none', c="red", label="cancer")
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("t-sne embedding")
+plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
+plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
+plt.show()
+
 
 clf = LinearSVC(C=0.0001)
 
