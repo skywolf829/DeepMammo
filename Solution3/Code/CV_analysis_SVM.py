@@ -37,8 +37,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Cancer",), (1,))
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
@@ -88,9 +88,13 @@ print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * stats.sem(ROCs)) + "
 """
 # For LOO and Bootstrapping
 
+# Arek's suggestion to see stdev with 80% of training set used.
+codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
 loo = LeaveOneOut()
+kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
-for train_index, test_index in loo.split(codes_all):   
+for train_index, test_index in kf.split(codes_all):
+#for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
     clf.fit(X_train, y_train)
@@ -114,7 +118,7 @@ print("Avg AUC: " + str(np.average(ROCs)))
 print("STDev of CV AUC: " + str(np.std(ROCs)))
 print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
 # Method 1, direct CI computation
-print("95% CI for CV AUC 1: " + str(roc_auc - 1.96 * stats.sem(ROCs)) + " to " + str(roc_auc + 1.96 * stats.sem(ROCs)))
+print("95% CI for CV AUC 1: " + str(roc_auc - 1.96 * np.std(ROCs)) + " to " + str(roc_auc + 1.96 * np.std(ROCs)))
 # Method 2, implicit CI from the sorted scores 
 sorted_scores = np.array(ROCs)
 sorted_scores.sort()
@@ -123,6 +127,7 @@ confidence_upper = sorted_scores[int(0.975 * len(ROCs))]
 print("95% CI for CV AUC 2: " + str(confidence_lower) + " to " + str(confidence_upper))
 
 # Method 3 from https://machinelearningmastery.com/calculate-bootstrap-confidence-intervals-machine-learning-results-python/
+# Recommended by Prof. Chen
 alpha = 0.95
 p = ((1.0-alpha)/2.0)*100
 lower = max(0.0, np.percentile(ROCs, p))
