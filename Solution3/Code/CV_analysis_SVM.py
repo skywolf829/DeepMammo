@@ -37,11 +37,23 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/NewCroppingMethodv5/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Cancer",), (1,))
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
+
+
+# If only using images that have radiologist response
+i = 0
+while i < len(names_all):
+    if names_all[i] not in radio_input_classify.keys():
+        names_all = np.delete(names_all, i, axis=0)
+        labels_all = np.delete(labels_all, i, axis=0)
+        images_all = np.delete(images_all, i, axis=0)
+        #print("deleting " + str(i))
+    else:
+        i = i + 1
 
 sess = tf.Session()
 print("Session start")
@@ -89,16 +101,30 @@ print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * stats.sem(ROCs)) + "
 # For LOO and Bootstrapping
 
 # Arek's suggestion to see stdev with 80% of training set used.
-codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
+#codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
+
 loo = LeaveOneOut()
 kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
-for train_index, test_index in kf.split(codes_all):
-#for train_index, test_index in loo.split(codes_all):   
+confidence = np.zeros(len(labels_all))
+print(len(confidence))
+#for train_index, test_index in kf.split(codes_all):
+for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
     clf.fit(X_train, y_train)
     predictions[test_index] = clf.predict(X_test)
+    confidence[test_index] = abs(clf.decision_function(X_test))
+
+print(len(confidence))
+# if testing human + AI
+i = 0
+while i < len(names_all):
+    if confidence[i] < radio_input_confidence[names_all[i]]:
+        predictions[i] = radio_input_classify[names_all[i]]
+    i = i + 1   
+# end testing human + AI     
+
 fpr, tpr, thresholds = roc_curve(labels_all, predictions)
 roc_auc = auc(fpr, tpr)
 
@@ -135,5 +161,13 @@ p = (alpha+((1.0-alpha)/2.0))*100
 upper = min(1.0, np.percentile(ROCs, p))
 print("95% CI for CV AUC 3: " + str(lower) + " to " + str(upper))
 
-plt.hist(ROCs)
-plt.show()
+i = 0
+radio_prediction_list = []
+while i < len(names_all):
+    radio_prediction_list.append(radio_input_classify[names_all[i]])
+    i = i + 1
+fpr, tpr, thresholds = roc_curve(labels_all, radio_prediction_list)
+roc_auc = auc(fpr, tpr)
+print("Radiologist AUC: " + str(roc_auc))
+#plt.hist(ROCs)
+#plt.show()

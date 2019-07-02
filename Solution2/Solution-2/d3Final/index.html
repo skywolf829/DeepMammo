@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+  color: #FF6A00;
+}
+
+body, html, .container-fluid {
+        height: 100vh;
+   }
+
+
+
+</style>
+
+
+
+<div class="col-md-3" id="area3">
+<body>
+
+<h1> tSNE data for Mammograms </h1>
+<h5> Click on image to dispay CAM Map </h5>
+<h5> Double click on image to remove selected CAMs </h5>
+
+<svg width="500" height="500"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://code.jquery.com/jquery.js"></script>
+<script src=
+  "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js">
+</script>
+<link rel="stylesheet" href=
+ "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css"
+>
+<script>
+
+var n = 50; // number of points
+var max = 100; // maximum of x and y
+var numCam=0; //number of CAM images being displayed
+var camWidth = 370; //Width of class activation map images
+var camHeight = 800; //Height of class activation map images
+var svgH = 420; //Height of the SVG container that contain the CAM images
+var svgW = 370 //Width of the SVG container that contain the CAM images
+
+// dimensions and margins
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height"),
+width = 0.6*width;
+height = 0.6*height;
+var picWidth = 20;
+var picHeight = 20;
+var margin = {top: (0.5*width), right: (0.1*width), bottom: (0.2*width), left: (0.2*width)};
+var lastTransform = 1;
+
+//Dimensions of the gradient legend
+var legendHeight = 10;
+var legendWidth = width * 0.6;
+
+
+//Creates gradient legend pallette
+var legendGradient = svg.append("defs")
+    .append("linearGradient")
+    .attr("id","legendGradient")
+    .attr("x1", "0%").attr("y1", "0%")
+    .attr("x2", "100%").attr("y2", "0%");
+
+
+  legendGradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#ff3800")
+  legendGradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#9fbfff")
+
+
+
+
+
+// create a clipping region
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height)
+
+
+
+// create scale objects
+var xScale = d3.scaleLinear()
+  .domain([0, max])
+  .range([0, width]);
+var yScale = d3.scaleLinear()
+  .domain([0, max])
+  .range([height, 0]);
+// create axis objects
+var xAxis = d3.axisBottom(xScale)
+  .ticks(20, "s");
+var yAxis = d3.axisLeft(yScale)
+  .ticks(20, "s");
+// Draw Axis
+var gX = svg.append('g')
+  .attr('transform', 'translate(' + margin.left + ',' + (margin.top + height) + ')')
+  .call(xAxis);
+var gY = svg.append('g')
+  .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+  .call(yAxis);
+
+  // text label for the x axis
+ svg.append("text")
+     .attr("transform",
+           "translate(" + (width/2) + " ," +
+                          (height + margin.top + 36) + ")")
+     .style("text-anchor", "middle")
+     .text("tSNE-x");
+
+     // text label for the y axis
+  svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 15)
+      .attr("x",-300)
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("tSNE-y");
+//Establishes the color of the gradient legend
+var gradientColor = d3.scaleLinear()
+  .domain([0,1])
+  .range(["#9fbfff","#ff3800"])
+
+
+// Draw Datapoints
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+var points_g = svg.append("g")
+  .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+  .attr("clip-path", "url(#clip)")
+  .classed("points_g", true);
+
+// Initializes the rectangle and text for the legend
+  var legend = svg.selectAll(".legend")
+      .data(["Response Rate"])
+      .enter().append("g")
+      .classed("legend",true)
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+  legend.append("rect")
+      .attr("x", width-18)
+      .attr("y", height-230)
+      .attr("width", 150)
+      .attr("height", 20)
+      .style("fill", "url(#legendGradient)");
+
+  legend.append("text")
+        .attr("class", "mono")
+        .text("Anomalous")
+        .attr("x", width+100)
+        .attr("y", height-240)
+
+
+  legend.append("text")
+        .attr("class", "mono")
+        .text("Normal")
+        .attr("x", width-35)
+        .attr("y", height-240);
+
+  legend.append("text")
+        .attr("class", "mono")
+        .text("100")
+        .attr("x", width+120)
+        .attr("y", height-190)
+
+
+  legend.append("text")
+        .attr("class", "mono")
+        .text("0")
+        .attr("x", width-20)
+        .attr("y", height-190);
+
+  legend.append("text")
+        .attr("class", "mono")
+        .text("75")
+        .attr("x", width+81.5)
+        .attr("y", height-190);
+
+  legend.append("text")
+              .attr("class", "mono")
+              .text("50")
+              .attr("x", width+51.5)
+              .attr("y", height-190);
+
+  legend.append("text")
+              .attr("class", "mono")
+              .text("Normalized Human Score")
+              .attr("x", width-20)
+              .attr("y", height-170);
+
+  legend.append("text")
+              .attr("class", "mono")
+              .text("Computed Binary Choice")
+              .attr("x", width-20)
+              .attr("y", height-260);
+
+
+  legend.append("text")
+          .attr("class", "mono")
+          .text("25")
+          .attr("x", width+13.75)
+          .attr("y", height-190);
+
+
+//Imports the excel spreadsheet
+d3.csv("/data1/data1.csv", function(error, data) {
+  data.forEach(function(d) {
+    d.x = +d.x;
+    d.y = +d.y;
+  });
+
+
+  //Sets up the left bar gradient (Blue)
+  var areaGradient1 = svg.append("defs")
+      .append("linearGradient")
+      .attr("id","areaGradient1")
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "0%");
+
+  //Sets up the left bar gradient (Green)
+  var areaGradient2 = svg.append("defs")
+      .append("linearGradient")
+      .attr("id","areaGradient2")
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "0%");
+
+  //Sets up the right bar gradient
+  var areaGradient3 = svg.append("defs").selectAll("linearGradient")
+      .data(data)
+      .enter().append("linearGradient")
+      .attr("id",function(d){return d.num})
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "0%");
+
+  areaGradient3.append("stop").data(data)
+      .attr("offset", "0%")
+      .attr("stop-color", "black")
+      .attr("opacity","0")
+  areaGradient3.append("stop").data(data)
+      .attr("offset", "49%")
+      .attr("stop-color", "black")
+      .attr("opacity","0")
+
+  areaGradient3.append("stop").data(data)
+          .attr("offset", "51%")
+          .attr("stop-color", function(d) {return gradientColor(d.rr)})
+
+  areaGradient3.append("stop").data(data)
+      .attr("offset", "100%")
+      .attr("stop-color", function(d) {return gradientColor(d.rr)})
+
+
+  areaGradient1.append("stop").data(data)
+      .attr("offset", "0%")
+      .attr("stop-color", "#ff3800")
+  areaGradient1.append("stop").data(data)
+      .attr("offset", "49%")
+      .attr("stop-color", "#ff3800")
+
+  areaGradient1.append("stop")
+          .attr("offset", "51%")
+          .attr("stop-color", "black")
+          .attr("opacity","0")
+  areaGradient1.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "black")
+      .attr("opacity","0")
+
+  areaGradient2.append("stop").data(data)
+      .attr("offset", "0%")
+      .attr("stop-color", "#9fbfff")
+  areaGradient2.append("stop").data(data)
+      .attr("offset", "49%")
+      .attr("stop-color", "#9fbfff")
+
+  areaGradient2.append("stop")
+          .attr("offset", "51%")
+          .attr("stop-color", "black")
+          .attr("opacity","0")
+  areaGradient2.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "black")
+      .attr("opacity","0")
+
+      points_g.selectAll(".myPoint").data(data)
+       .enter().append("rect")
+       .attr('x', function(d) {return xScale(d.x)+3})
+       .attr('y', function(d) {return yScale(d.y)})
+       .style("fill", function(d) {return "url(#"+d.num+")"})
+       .attr("width", picWidth)
+       .attr("height", function(d){return picWidth*d.rr})
+
+   //Places left and right bars
+   points_g.selectAll(".myPoint").data(data)
+    .enter().append("rect")
+    .attr('x', function(d) {return xScale(d.x)-3})
+    .attr('y', function(d) {return yScale(d.y)})
+    .style("fill",function(d){
+      if(d.Image.includes("N")){
+        return "url(#areaGradient1)"
+      }
+      else{
+        return "url(#areaGradient2)"
+      }
+    })
+    .attr("width", picWidth)
+    .attr("height", picHeight)
+
+
+//Places images on to points on page load
+points_g.selectAll(".myPoint").data(data)
+      .enter().append("image")
+      .attr('x', function(d) {return xScale(d.x)})
+      .attr('y', function(d) {return yScale(d.y)})
+      .attr("xlink:href", function(d){ return "/data1/"+d.Image; })
+      .attr("width", picWidth)
+      .attr("height", picHeight)
+      //Displays tooltip
+      .on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d["Image"] + "<br/> (" + d.x
+	        + ", " + d.y + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+      })
+      //Kills tooltip
+      .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+      })
+      //Bring up CAM Map
+      .on('click', function(d) {
+          //window.open(
+          //  "/Output/"+d.num+"/content_vgg_conv1_1_relu/activations/grid_activation.png",
+          //  "_blank" // <- This is what makes it open in a new window.
+          //);
+          var newPic = d3.select("#area1")
+            .append("image")
+            .attr("xlink:href", function(d){return "/Output/"+d.num+"/content_vgg_conv1_1_relu/activations/grid_activation.png"})
+            .append("text")
+                  .attr("class", "mono")
+                  .text("Anomalous")
+                  .style("fill","darkOrange")
+                  .attr("x", width+100)
+                  .attr("y", height-365)
+        });
+
+});
+
+
+
+// Pan and zoom
+var zoom = d3.zoom()
+    .scaleExtent([.25, 20])
+    .extent([[0, 0], [width, height]])
+    .on("zoom", zoomed);
+
+svg.append("rect")
+    .attr("width", width)
+    .attr("height", height)
+    .style("fill", "none")
+    .style("pointer-events", "all")
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+    .call(zoom);
+
+
+function zoomed() {
+// create new scale ojects based on event
+    var new_xScale = d3.event.transform.rescaleX(xScale);
+    var new_yScale = d3.event.transform.rescaleY(yScale);
+    var transform = d3.zoomTransform(this);
+// The following logic prevents pictures from getting to big or small on resize
+    if(transform.k != lastTransform){
+      picWidth = picWidth * transform.k
+      picHeight = picHeight * transform.k
+    }
+    if(picWidth > 113 && picHeight > 113){
+      picWidth = 113
+      picHeight = 113
+    }
+    if (picWidth < 20 && picHeight < 20) {
+      picWidth = 20
+      picHeight = 20
+    }
+    if(transform.k > 1 && transform.k < lastTransform){
+      picWidth = picWidth * (1.0/transform.k)
+      picHeight = picHeight * (1.0/transform.k)
+    }
+    if(transform.k < 1 && transform.k > lastTransform){
+      picWidth = picWidth * (1.0/transform.k)
+      picHeight = picHeight * (1.0/transform.k)
+    }
+    if(picWidth > 113 && picHeight > 113){
+      picWidth = 113
+      picHeight = 113
+    }
+    if (picWidth < 20 && picHeight < 20) {
+      picWidth = 20
+      picHeight = 20
+    }
+    lastTransform = transform.k
+//Reads in data on resize
+d3.csv("/data1/data1.csv", function(error, data) {
+  data.forEach(function(d) {
+    d.x = +d.x;
+    d.y = +d.y;
+  });
+    gX.call(xAxis.scale(new_xScale));
+    gY.call(yAxis.scale(new_yScale));
+    points_g.remove()
+    points_g = svg.append("g")
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+      .attr("clip-path", "url(#clip)")
+      .classed("points_g", true);
+      //Defines gradients on zoom
+      var areaGradient1 = svg.append("defs")
+          .append("linearGradient")
+          .attr("id","areaGradient1")
+          .attr("x1", "0%").attr("y1", "0%")
+          .attr("x2", "100%").attr("y2", "0%");
+
+      var areaGradient2 = svg.append("defs")
+          .append("linearGradient")
+          .attr("id","areaGradient2")
+          .attr("x1", "0%").attr("y1", "0%")
+          .attr("x2", "100%").attr("y2", "0%");
+
+
+      areaGradient1.append("stop").data(data)
+          .attr("offset", "0%")
+          .attr("stop-color", "#ff3800")
+      areaGradient1.append("stop").data(data)
+          .attr("offset", "49%")
+          .attr("stop-color", "#ff3800")
+
+      areaGradient1.append("stop")
+              .attr("offset", "51%")
+              .attr("stop-color", "black")
+              .attr("opacity","0")
+      areaGradient1.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", "black")
+          .attr("opacity","0")
+
+      areaGradient2.append("stop").data(data)
+          .attr("offset", "0%")
+          .attr("stop-color", "#9fbfff")
+      areaGradient2.append("stop").data(data)
+          .attr("offset", "49%")
+          .attr("stop-color", "#9fbfff")
+
+      areaGradient2.append("stop")
+              .attr("offset", "51%")
+              .attr("stop-color", "black")
+              .attr("opacity","0")
+      areaGradient2.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", "black")
+          .attr("opacity","0")
+          //Plaes scaled rectangles behind images
+          points_g.selectAll(".myPoint").data(data)
+           .enter().append("rect")
+           .attr('x', function(d) {return new_xScale(d.x)+3})
+           .attr('y', function(d) {return new_yScale(d.y)})
+           //.style("fill","url(#areaGradient3)")
+           .style("fill", function(d) {return "url(#"+d.num+")"})
+           .attr("width", picWidth)
+           .attr("height", function(d){return picWidth*d.rr})
+
+   //Colors newly scaled retangles
+   points_g.selectAll(".myPoint").data(data)
+    .enter().append("rect")
+    .attr('x', function(d) {return new_xScale(d.x)-3})
+    .attr('y', function(d) {return new_yScale(d.y)})
+    .style("fill",function(d){
+      if(d.Image.includes("N")){
+        return "url(#areaGradient1)"
+      }
+      else{
+        return "url(#areaGradient2)"
+      }
+    })
+    .attr("width", picWidth)
+    .attr("height", picHeight)
+
+    //Places scaled images on to data points
+    points_g.selectAll(".myPoint").data(data)
+     .enter().append("image")
+     .attr('x', function(d) {return new_xScale(d.x)})
+     .attr('y', function(d) {return new_yScale(d.y)})
+     .attr("xlink:href", function(d){ return "/data1/"+d.Image; })
+     .attr("width", picWidth)
+     .attr("height", picHeight)
+     //Display tooltip
+     .on("mouseover", function(d) {
+         tooltip.transition()
+              .duration(200)
+              .style("opacity", .9);
+         tooltip.html(d["Image"] + "<br/> (" + d.x
+         + ", " + d.y + ")")
+              .style("left", (d3.event.pageX + 5) + "px")
+              .style("top", (d3.event.pageY - 28) + "px");
+     })
+     //Remove tooltip
+     .on("mouseout", function(d) {
+         tooltip.transition()
+              .duration(500)
+              .style("opacity", 0);
+     })
+     //Display CAM Map
+     .on('click', function(d) {
+       numCam=numCam+1;
+       if(numCam<5){
+         if(numCam<3){
+         var newText = d3.select("#area1")
+           .append("text")
+           .attr("class", "mono")
+           .text(d.Image+":          ")
+           .style("fill","darkOrange")
+           .attr("x", 0)
+           .attr("y", 0)
+
+         var newPic = d3.select("#area1")
+           .append("svg")
+           .attr("width", svgW)
+           .attr("height", svgH)
+           .append("image")
+           .attr("xlink:href", "/Output/"+d.num+"/content_vgg_conv1_1_relu/activations/grid_activation.png")
+           .attr("width", camWidth)
+           .attr("height", camHeight)
+           .attr("x",0)
+           .attr("y",-170)
+         }
+         else{
+           var newText = d3.select("#area2")
+             .append("text")
+             .attr("class", "mono")
+             .text(d.Image+":          ")
+             .style("fill","darkOrange")
+             .attr("x", 0)
+             .attr("y", 0)
+
+           var newPic = d3.select("#area2")
+             .append("svg")
+             .attr("width", svgW)
+             .attr("height", svgH)
+             .append("image")
+             .attr("xlink:href", "/Output/"+d.num+"/content_vgg_conv1_1_relu/activations/grid_activation.png")
+             .attr("width", camWidth)
+             .attr("height", camHeight)
+             .attr("x",0)
+             .attr("y",-170)
+         }
+       }
+
+       })
+       //Remove CAM Maps
+       .on('dblclick',function(d){
+          d3.selectAll(".col-md-4").selectAll("svg").remove()
+          d3.selectAll(".col-md-4").selectAll("text").remove()
+          numCam=0;
+       });
+
+
+ });
+}
+</script>
+</body>
+</div>
+<div class="col-md-4" id="area1"></div>
+<div class="col-md-4" id="area2"></div>
