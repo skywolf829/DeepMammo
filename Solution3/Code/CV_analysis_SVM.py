@@ -82,19 +82,7 @@ codes_cancer = sess.run(vgg.relu6, feed_dict=feed_dict_cancer)
 codes_all = np.append(codes_normal, codes_cancer, axis=0)
 sess.close()
 
-# Creates a TSNE plot for the deep features generated
-pca_50 = PCA(n_components=50)
-pca_codes = pca_50.fit_transform(codes_all)
-tsne_embedding = TSNE(n_components=2, perplexity=20, init='random', random_state=0).fit_transform(pca_codes)
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-ax.scatter(tsne_embedding[0:len(codes_normal),0], tsne_embedding[0:len(codes_normal),1], edgecolors='none', c="blue", label="normal")
-ax.scatter(tsne_embedding[len(codes_normal):,0], tsne_embedding[len(codes_normal):,1], edgecolors='none', c="red", label="cancer")
-plt.legend(loc='lower right', fontsize='x-large')
-plt.title("t-sne embedding")
-plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
-plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
-plt.show()
+
 
 
 clf = LinearSVC(C=0.0001)
@@ -200,3 +188,27 @@ roc_auc = auc(fpr, tpr)
 print("Radiologist AUC: " + str(roc_auc))
 #plt.hist(ROCs)
 #plt.show()
+
+
+# Creates a TSNE plot for the deep features generated
+clf.fit(codes_all, labels_all)
+nums = clf.decision_function(codes_all).reshape(-1, 1)
+pca_50 = PCA(n_components=50)
+pca_codes = pca_50.fit_transform(codes_all)
+scaler = MinMaxScaler()
+pca_codes = scaler.fit_transform(pca_codes)
+final_values = []
+for i in range(len(nums)):
+   final_values.append([nums[i][0]])
+   for item in pca_codes[i]:
+       final_values[i].append(item)
+tsne_embedding = TSNE(n_components=2, perplexity=30, init='random', learning_rate=200, n_iter=10000, random_state=0).fit_transform(final_values)
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.scatter(tsne_embedding[0:len(codes_normal),0], tsne_embedding[0:len(codes_normal),1], edgecolors='none', c="blue", label="normal")
+ax.scatter(tsne_embedding[len(codes_normal):,0], tsne_embedding[len(codes_normal):,1], edgecolors='none', c="red", label="cancer")
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("t-sne embedding")
+plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
+plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
+plt.show()
