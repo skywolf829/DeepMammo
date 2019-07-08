@@ -3,6 +3,7 @@ import os
 import PIL
 import atexit
 import numpy as np
+import time
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -51,13 +52,9 @@ class CropTool(QMainWindow):
         self.mousePressed = False
 
     def cursorOverImage1(self, point):
-        if(point.x() > self.imagePadding and point.x() < self.imagePadding + self.imageWidth and point.y() > self.imagePadding and point.y() < self.imagePadding + self.imageHeight):
-            return True
-        return False
+        return point.x() > self.imagePadding and point.x() < self.imagePadding + self.imageWidth and point.y() > self.imagePadding and point.y() < self.imagePadding + self.imageHeight
     def cursorOverImage2(self, point):  
-        if(point.x() > self.imagePadding * 2 + self.imageWidth and point.x() < self.imagePadding * 2 + self.imageWidth * 2 and point.y() > self.imagePadding and point.y() < self.imagePadding + self.imageHeight):
-            return True
-        return False
+        return point.x() > self.imagePadding * 2 + self.imageWidth and point.x() < self.imagePadding * 2 + self.imageWidth * 2 and point.y() > self.imagePadding and point.y() < self.imagePadding + self.imageHeight
     def cursorPosOverImage1(self, point):
         return QPoint(point.x()-self.imagePadding, point.y()-self.imagePadding)
     def cursorPosOverImage2(self, point):
@@ -158,13 +155,20 @@ class CropTool(QMainWindow):
 
     def updateMirroredCursor(self, point):
         point = self.mainWidget.mapFromGlobal(point)
+        
         if(self.cursorOverImage1(point)):
+            print("////////////over image 1 - " + str(int(round(time.time() * 1000))))
             mirrorPoint = self.getCorrespondingPointOverImage2(point)
+            print("Got mirror point")
             self.mirroredCursorLabel.setVisible(True)
             self.mirroredCursorLabel.setGeometry(mirrorPoint.x() - self.drawingWidth / 2, mirrorPoint.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
+            print("Finished mirrored cursor")
             self.cursorLabel.setVisible(True)
             self.cursorLabel.setGeometry(point.x() - self.drawingWidth / 2, point.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
+            print("///////////finished draw - " + str(int(round(time.time() * 1000))))
+        """
         elif(self.cursorOverImage2(point)):
+            print("over image 2")
             mirrorPoint = self.getCorrespondingPointOverImage1(point)
             self.mirroredCursorLabel.setVisible(True)
             self.mirroredCursorLabel.setGeometry(mirrorPoint.x() - self.drawingWidth / 2, mirrorPoint.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
@@ -173,6 +177,7 @@ class CropTool(QMainWindow):
         else:
             self.mirroredCursorLabel.setVisible(False)
             self.cursorLabel.setVisible(False)
+        """
 
     def updateDrawing(self, point):
         point = self.mainWidget.mapFromGlobal(point)
@@ -209,8 +214,8 @@ class CropTool(QMainWindow):
         #self.updateMask()        
         #self.img2.setPixmap(QPixmap.fromImage(ImageQt(im)))
     def update(self):
+        cursor = QCursor()
         while self.running:
-            cursor = QCursor()
             pos = cursor.pos()
             self.updateDrawing(pos)
             self.updateMirroredCursor(pos)
