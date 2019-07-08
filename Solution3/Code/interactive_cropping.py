@@ -1,6 +1,7 @@
 import sys
 import os
 import PIL
+import atexit
 import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -8,41 +9,29 @@ from PyQt5.QtWidgets import *
 from PIL.ImageQt import ImageQt
 from PIL import Image
 from PIL.ImageChops import multiply
-
-class DrawingThread(QThread):
-
-    def __init__(self, cropTool):
-        QThread.__init__(self)
-        self.cropTool = cropTool
-
-    def __dle__(self):
-        self.wait()
-
-    def run(self):
-        print("test run")
-        while True:
-            cursor = QCursor()
-            pos = cursor.pos()
-            print("test")
-            self.cropTool.updateMirroredCursor(pos)
-            self.sleep(0)
-
+from threading import Thread
+from time import sleep
 
 class CropTool(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.running = True
         self.index = 0
-        self.drawingWidth = 10
+        self.drawingWidth = 100
         self.imagePadding = 15
         self.imageWidth = 800
         self.imageHeight = 1000
         self.buttonHeight = 50
         self.buttonWidth = 200
+        self.drawing = True
+        self.erasing = False
+        self.mousePressed = False
         self.mainWidget = None
         self.img1 = None
         self.img2 = None
         self.opacitySlider = None
+        self.cursorLabel= None
         self.mirroredCursorLabel = None
         self.image_names = []
         self.noCropImages = {}
@@ -51,18 +40,15 @@ class CropTool(QMainWindow):
         self.windowWidth = self.imageWidth * 2 + self.imagePadding * 3
         self.windowHeight = self.imageHeight + self.imagePadding * 3 + self.buttonHeight
         self.initUI()        
-        self.drawThread = DrawingThread(self)
-        self.drawThread.start()
+        
 
     def mousePressEvent(self, QMouseEvent):
-        print(QMouseEvent.pos())    
-        overIm1 = self.cursorOverImage1(QMouseEvent.pos())
-        overIm2 = self.cursorOverImage2(QMouseEvent.pos())
-        print("Over 1: " + str(overIm1) + " Over 2: " + str(overIm2))
-        if(overIm1):
-            print("Im 1 relative pos: " + str(self.cursorPosOverImage1(QMouseEvent.pos())))
-        if(overIm2):
-            print("Im 2 relative pos: " + str(self.cursorPosOverImage2(QMouseEvent.pos())))
+        print("Mouse Pressed " + str(QMouseEvent.pos()))
+        self.mousePressed = True
+
+    def mouseReleaseEvent(self, QMouseEvent):
+        print("Mouse Released " + str(QMouseEvent.pos()))
+        self.mousePressed = False
 
     def cursorOverImage1(self, point):
         if(point.x() > self.imagePadding and point.x() < self.imagePadding + self.imageWidth and point.y() > self.imagePadding and point.y() < self.imagePadding + self.imageHeight):
@@ -88,8 +74,6 @@ class CropTool(QMainWindow):
         
     def initUI(self):        
         self.mainWidget = QWidget()
-        self.mirroredCursorLabel = QLabel(self.mainWidget)
-        self.mirroredCursorLabel.setPixmap(QPixmap("whiteRect.png"))
         self.img1 = QLabel(self.mainWidget)
         self.img2 = QLabel(self.mainWidget)
 
@@ -106,10 +90,36 @@ class CropTool(QMainWindow):
         self.opacitySlider.setTickInterval(10)
         self.opacitySlider.setGeometry(self.windowWidth / 2 - self.buttonWidth / 2, self.windowHeight - self.imagePadding - self.buttonHeight, self.buttonWidth, self.buttonHeight)
         self.opacitySlider.valueChanged.connect(self.sliderValueChanged)
+        
+        self.drawingButton = QPushButton('Draw', self.mainWidget)
+        self.drawingButton.setGeometry(self.windowWidth / 2 + self.buttonWidth + self.imagePadding, self.windowHeight - self.imagePadding - self.buttonHeight, self.buttonWidth, self.buttonHeight)
+        self.drawingButton.clicked.connect(self.drawButtonClicked)
+        
+        self.erasingButton = QPushButton('Erase', self.mainWidget)
+        self.erasingButton.setGeometry(self.windowWidth / 2 + self.buttonWidth * 2 + self.imagePadding * 2, self.windowHeight - self.imagePadding - self.buttonHeight, self.buttonWidth, self.buttonHeight)
+        self.erasingButton.clicked.connect(self.eraseButtonClicked)
+
+        self.mirroredCursorLabel = QLabel(self.mainWidget)
+        self.mirroredCursorLabel.setPixmap(QPixmap("whiteRect.png").scaled(self.drawingWidth, self.drawingWidth))
+
+        self.cursorLabel = QLabel(self.mainWidget)
+        self.cursorLabel.setPixmap(QPixmap("whiteRect.png").scaled(self.drawingWidth, self.drawingWidth))
         #w.setLayout(vbox)
         self.setGeometry(0, 0, self.windowWidth, self.windowHeight)
         self.setWindowTitle("Interactive Cropping Tool")
         self.setCentralWidget(self.mainWidget)
+
+    def drawButtonClicked(self):
+        self.drawing = True
+        self.erasing = False
+        self.mirroredCursorLabel.setPixmap(QPixmap("whiteRect.png").scaled(self.drawingWidth, self.drawingWidth))
+        self.cursorLabel.setPixmap(QPixmap("whiteRect.png").scaled(self.drawingWidth, self.drawingWidth))
+
+    def eraseButtonClicked(self):
+        self.drawing = False
+        self.erasing = True
+        self.mirroredCursorLabel.setPixmap(QPixmap("blackRect.png").scaled(self.drawingWidth, self.drawingWidth))
+        self.cursorLabel.setPixmap(QPixmap("blackRect.png").scaled(self.drawingWidth, self.drawingWidth))
 
     def setImageDirectories(self, noCropDir, maskDir):
         for image in os.listdir(noCropDir):
@@ -147,22 +157,77 @@ class CropTool(QMainWindow):
         self.img1.setPixmap(pic1)
 
     def updateMirroredCursor(self, point):
+        point = self.mainWidget.mapFromGlobal(point)
         if(self.cursorOverImage1(point)):
             mirrorPoint = self.getCorrespondingPointOverImage2(point)
             self.mirroredCursorLabel.setVisible(True)
             self.mirroredCursorLabel.setGeometry(mirrorPoint.x() - self.drawingWidth / 2, mirrorPoint.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
+            self.cursorLabel.setVisible(True)
+            self.cursorLabel.setGeometry(point.x() - self.drawingWidth / 2, point.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
         elif(self.cursorOverImage2(point)):
             mirrorPoint = self.getCorrespondingPointOverImage1(point)
             self.mirroredCursorLabel.setVisible(True)
             self.mirroredCursorLabel.setGeometry(mirrorPoint.x() - self.drawingWidth / 2, mirrorPoint.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
+            self.cursorLabel.setVisible(True)
+            self.cursorLabel.setGeometry(point.x() - self.drawingWidth / 2, point.y() - self.drawingWidth / 2, self.drawingWidth, self.drawingWidth)
         else:
             self.mirroredCursorLabel.setVisible(False)
+            self.cursorLabel.setVisible(False)
+
+    def updateDrawing(self, point):
+        point = self.mainWidget.mapFromGlobal(point)
+        if self.mousePressed:
+            if self.cursorOverImage1(point):
+                relativePosOverImage2 = self.cursorPosOverImage1(point)
+                if self.drawing:
+                    self.drawOnMask(relativePosOverImage2)
+                elif self.erasing:
+                    self.eraseOnMask(relativePosOverImage2)
+            elif self.cursorOverImage2(point):
+                relativePosOverImage2 = self.cursorPosOverImage2(point)
+                if self.drawing:
+                    self.drawOnMask(relativePosOverImage2)
+                elif self.erasing:
+                    self.eraseOnMask(relativePosOverImage2)
+
+    def drawOnMask(self, point):
+        im = self.newMaskImages[self.image_names[self.index]]
+        im = np.array(im)  
+        im[max(0, int(point.y() - self.drawingWidth / 2)):min(self.imageHeight, int(point.y() + self.drawingWidth / 2)),max(0, int(point.x() - self.drawingWidth / 2)):min(self.imageWidth, int(point.x() + self.drawingWidth / 2))] = 255       
+        im = PIL.Image.fromarray(np.uint8(im))    
+        self.newMaskImages[self.image_names[self.index]] = im
+        #self.updateMask()        
+        #self.img2.setPixmap(QPixmap.fromImage(ImageQt(im)))
+
+    def eraseOnMask(self, point):
+        im = self.newMaskImages[self.image_names[self.index]]
+        im = np.array(im)  
+        #print(point)
+        im[max(0, int(point.y() - self.drawingWidth / 2)):min(self.imageHeight, int(point.y() + self.drawingWidth / 2)),max(0, int(point.x() - self.drawingWidth / 2)):min(self.imageWidth, int(point.x() + self.drawingWidth / 2))] = 0     
+        im = PIL.Image.fromarray(np.uint8(im))    
+        self.newMaskImages[self.image_names[self.index]] = im
+        #self.updateMask()        
+        #self.img2.setPixmap(QPixmap.fromImage(ImageQt(im)))
+    def update(self):
+        while self.running:
+            cursor = QCursor()
+            pos = cursor.pos()
+            self.updateDrawing(pos)
+            self.updateMirroredCursor(pos)
+            sleep(0.01)
+            
+    def closeEvent(self, event):
+        self.running = False
+        event.accept()
+
 def main():
     app = QApplication(sys.argv)
     win = CropTool()
     win.setImageDirectories("../Images/NoCropForAnalysis/Normal", "../Images/AutoCropMasks/Normal")
     win.setPics(0)
     win.show()
+    thread = Thread(target = win.update)
+    thread.start()
     app.exit(app.exec_())
     
 if __name__ == '__main__':
