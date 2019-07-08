@@ -612,9 +612,35 @@ def segment_pectoral_from_breast(path):
     cv2.waitKey(0)
     return final_image
 
+def segment_pectoral_from_breast_mask(path):
+    im_og, side = load_im(path)
+    mask, bbox = breast_segment(im_og, scale_factor=1)
+    if DEBUG:
+        cv2.imshow("FirstMask", mask.astype(np.uint8))
+    im_og = np.multiply(im_og, mask)
+    im = np.array(PIL.Image.fromarray(im_og).resize((int(im_og.shape[1]*0.25), int(im_og.shape[0]*0.25))))
+    start, end = find_start_and_end_points(im)
+    
+    print("start: " + str(start))
+    print("end: " + str(end))
+    im = np.array(PIL.Image.fromarray(im).filter(PIL.ImageFilter.MedianFilter(size=9)))
+    im = anisotropic_diffusion(im, niter=1)
+    im = im.astype(np.uint8)
+    edges = canny(im)
+    edges = clean_canny(edges, start, end)
+    final_mask = finalize_boundary(edges, im, start, end)
+    final_image = np.array(PIL.Image.fromarray(final_mask*255).resize((im_og.shape[1], im_og.shape[0]))).astype(np.uint8)
+    return final_image
+
 def save_all_crops(dir, saveDir):
     for im_name in os.listdir(dir):
         im = segment_pectoral_from_breast(os.path.join(dir,im_name))
+        short_name = im_name.split(".")[0]
+        PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
+
+def save_all_crops_mask(dir, saveDir):
+    for im_name in os.listdir(dir):
+        im = segment_pectoral_from_breast_mask(os.path.join(dir,im_name))
         short_name = im_name.split(".")[0]
         PIL.Image.fromarray(im).save(os.path.join(saveDir, short_name + ".png"))
 
@@ -694,6 +720,10 @@ DEBUG = False
 #save_all_crops("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/NewCroppingMethodv5/Contralateral/")
 #save_all_crops("../Images/NORMAL/", "../Images/NewCroppingMethodv5/Normal/")
 #save_all_crops("../Images/CANCER/", "../Images/NewCroppingMethodv5/Cancer/")
+
+#save_all_crops_mask("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/AutoCropMasks/Contralateral/")
+#save_all_crops_mask("../Images/NORMAL/", "../Images/AutoCropMasks/Normal/")
+#save_all_crops_mask("../Images/CANCER/", "../Images/AutoCropMasks/Cancer/")
 
 #all_black_for_analysis("../Images/CONTRALATERAL BREAST TO CANCEROUS/", "../Images/AllBlackForAnalysis/Contralateral/")
 #all_black_for_analysis("../Images/NORMAL/", "../Images/AllBlackForAnalysis/Normal/")

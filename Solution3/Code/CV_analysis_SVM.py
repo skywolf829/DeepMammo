@@ -196,7 +196,7 @@ nums = clf.decision_function(codes_all).reshape(-1, 1)
 pca_50 = PCA(n_components=50)
 pca_codes = pca_50.fit_transform(codes_all)
 scaler = MinMaxScaler()
-pca_codes = scaler.fit_transform(pca_codes)
+#pca_codes = scaler.fit_transform(pca_codes)
 final_values = []
 for i in range(len(nums)):
    final_values.append([nums[i][0]])
@@ -209,6 +209,6 @@ ax.scatter(tsne_embedding[0:len(codes_normal),0], tsne_embedding[0:len(codes_nor
 ax.scatter(tsne_embedding[len(codes_normal):,0], tsne_embedding[len(codes_normal):,1], edgecolors='none', c="red", label="cancer")
 plt.legend(loc='lower right', fontsize='x-large')
 plt.title("t-sne embedding")
-plt.xlim([min(tsne_embedding[:,0]-1), max(tsne_embedding[:,0]+1)])
-plt.ylim([min(tsne_embedding[:,1]-1), max(tsne_embedding[:,1]+1)])
+plt.xlim([min(tsne_embedding[:,0]-1) - 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0])), max(tsne_embedding[:,0]) + 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0]))])
+plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1])), max(tsne_embedding[:,1]) + 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1]))])
 plt.show()
