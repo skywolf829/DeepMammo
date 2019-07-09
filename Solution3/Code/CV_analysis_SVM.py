@@ -37,11 +37,13 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/MidCropForAnalysis/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
+print(radio_input_classify.keys())
 while i < len(names_normal):
+    names_normal[i] = names_normal[i].split(".")[0] + ".png"
     if names_normal[i] not in radio_input_classify.keys():
         names_normal.pop(i)
         labels_normal.pop(i)
@@ -52,6 +54,7 @@ i = 0
 
 
 while i < len(names_cancer):
+    names_cancer[i] = names_cancer[i].split(".")[0] + ".png"
     if names_cancer[i] not in radio_input_classify.keys():
         names_cancer.pop(i)
         labels_cancer.pop(i)
@@ -124,6 +127,7 @@ loo = LeaveOneOut()
 kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
+for_tsne = np.zeros(len(labels_all))
 print(len(confidence))
 #for train_index, test_index in kf.split(codes_all):
 for train_index, test_index in loo.split(codes_all):   
@@ -132,6 +136,7 @@ for train_index, test_index in loo.split(codes_all):
     clf.fit(X_train, y_train)
     predictions[test_index] = clf.predict(X_test)
     confidence[test_index] = abs(clf.decision_function(X_test))
+    for_tsne[test_index] = clf.decision_function(X_test)
 
 print(len(confidence))
 # if testing human + AI
@@ -191,15 +196,14 @@ print("Radiologist AUC: " + str(roc_auc))
 
 
 # Creates a TSNE plot for the deep features generated
-clf.fit(codes_all, labels_all)
-nums = clf.decision_function(codes_all).reshape(-1, 1)
+for_tsne = for_tsne.reshape(-1, 1)
 pca_50 = PCA(n_components=50)
 pca_codes = pca_50.fit_transform(codes_all)
 scaler = MinMaxScaler()
-#pca_codes = scaler.fit_transform(pca_codes)
+pca_codes = scaler.fit_transform(pca_codes)
 final_values = []
-for i in range(len(nums)):
-   final_values.append([nums[i][0]])
+for i in range(len(for_tsne)):
+   final_values.append([for_tsne[i][0]])
    for item in pca_codes[i]:
        final_values[i].append(item)
 tsne_embedding = TSNE(n_components=2, perplexity=30, init='random', learning_rate=200, n_iter=10000, random_state=0).fit_transform(final_values)
@@ -212,3 +216,21 @@ plt.title("t-sne embedding")
 plt.xlim([min(tsne_embedding[:,0]-1) - 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0])), max(tsne_embedding[:,0]) + 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0]))])
 plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1])), max(tsne_embedding[:,1]) + 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1]))])
 plt.show()
+
+"""
+with open('../Results/ROCsNoCropSameDir.txt', 'w') as f:
+    for item in ROCs:
+        f.write("%s\n" % item)
+with open('../Results/predictionsNoCropSameDir.txt', 'w') as f:
+    for item in predictions:
+        f.write("%s\n" % item)
+with open('../Results/confidenceNoCropSameDir.txt', 'w') as f:
+    for item in confidence:
+        f.write("%s\n" % item)
+with open('../Results/labels.txt', 'w') as f:
+    for item in labels_all:
+        f.write("%s\n" % item)
+with open('../Results/names.txt', 'w') as f:
+    for item in names_all:
+        f.write("%s\n" % item)
+            """

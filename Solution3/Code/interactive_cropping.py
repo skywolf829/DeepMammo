@@ -22,7 +22,7 @@ class CropTool(QMainWindow):
         self.drawingWidth = 100
         self.imagePadding = 15
         self.imageWidth = 800
-        self.imageHeight = 1000
+        self.imageHeight = 800
         self.buttonHeight = 50
         self.buttonWidth = 200
         self.drawing = True
