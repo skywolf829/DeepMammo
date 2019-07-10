@@ -41,7 +41,6 @@ images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir
 images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
-print(radio_input_classify.keys())
 while i < len(names_normal):
     names_normal[i] = names_normal[i].split(".")[0] + ".png"
     if names_normal[i] not in radio_input_classify.keys():
@@ -138,7 +137,7 @@ for train_index, test_index in loo.split(codes_all):
     confidence[test_index] = abs(clf.decision_function(X_test))
     for_tsne[test_index] = clf.decision_function(X_test)
 
-utility_functions.printDictionaryInOrder(names_all, radio_input_confidence)
+utility_functions.printListInOrder(predictions)
 # if testing human + AI
 i = 0
 while i < len(names_all):

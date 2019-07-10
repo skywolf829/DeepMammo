@@ -162,7 +162,6 @@ images_all = np.append(images_normal, images_cancer, axis=0)
 
 
 im_name = "N12_L.png"
-label_id = 0
 
 test_index = [np.where(names_all==im_name)[0][0]]
 train_index = []
@@ -193,6 +192,8 @@ X_train, X_test = codes_all[train_index], codes_all[test_index]
 y_train, y_test = labels_all[train_index], labels_all[test_index]
 clf.fit(X_train, y_train)
 
+label_id = clf.predict(X_test)[0]
+print("Predicted: " + str(label_id))
 weights = clf.coef_[0]
 biases = clf.intercept_
 print("Manual computation: " + str(np.dot(X_test[0], weights)+biases[0]))
