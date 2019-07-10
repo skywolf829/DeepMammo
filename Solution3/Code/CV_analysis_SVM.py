@@ -37,8 +37,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
 print(radio_input_classify.keys())
@@ -128,7 +128,7 @@ kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
 for_tsne = np.zeros(len(labels_all))
-print(len(confidence))
+
 #for train_index, test_index in kf.split(codes_all):
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
@@ -138,7 +138,7 @@ for train_index, test_index in loo.split(codes_all):
     confidence[test_index] = abs(clf.decision_function(X_test))
     for_tsne[test_index] = clf.decision_function(X_test)
 
-print(len(confidence))
+utility_functions.printDictionaryInOrder(names_all, radio_input_confidence)
 # if testing human + AI
 i = 0
 while i < len(names_all):
@@ -158,7 +158,7 @@ for iteration in range(1000):
     fpr, tpr, thresholds = roc_curve(sample_labels, sample_predictions)
     roc_auc_sample = auc(fpr, tpr)
     ROCs.append(roc_auc_sample)
-    print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
+    #print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
 
 
 print("Initial AUC: " + str(roc_auc))

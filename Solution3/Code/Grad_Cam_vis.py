@@ -2,9 +2,11 @@ import sys
 sys.path.insert(0, '/tensorflowvgg')
 import os
 import pickle
+import cv2
 from os.path import isfile, isdir
 import numpy as np
 import tensorflow as tf
+import GuideReLU as GReLU
 from keras.preprocessing.image import load_img, img_to_array
 from scipy import stats
 from sklearn.svm import SVC, LinearSVC
@@ -32,11 +34,103 @@ import scipy
 from skimage.transform import resize
 import json
 
-codes_path = './codes'
-labels_path = './labels'
-names_path = './names'
-radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
+def guided_BP(image, label_id = -1):	
+	g = tf.get_default_graph()
+	with g.gradient_override_map({'Relu': 'GuidedRelu'}):
+		label_vector = tf.placeholder("float", [None, 2])
+		input_image = tf.placeholder("float", [None, 224, 224, 3])
 
+		vgg = vgg19.Vgg19SVM(last_layer_weights=[w, np.float32([-biases[0], biases[0]])])
+		with tf.name_scope("content_vgg"):
+		    vgg.build(input_image)
+
+		cost = vgg.fc7*label_vector
+	
+		# Guided backpropagtion back to input layer
+		gb_grad = tf.gradients(cost, input_image)[0]
+
+		init = tf.global_variables_initializer()
+	
+	# Run tensorflow 
+	with tf.Session(graph=g) as sess:    
+		sess.run(init)
+		output = [0.0]*vgg.prob.get_shape().as_list()[1] #one-hot embedding for desired class activations
+		if label_id == -1:
+			prob = sess.run(vgg.prob, feed_dict={input_image:image})
+
+			#creating the output vector for the respective class
+			index = np.argmax(prob)
+			print("Predicted_class: " + str(index))
+			output[index] = 1.0
+
+		else:
+			output[label_id] = 1.0
+		output = np.array(output)
+		gb_grad_value = sess.run(gb_grad, feed_dict={input_image:image, label_vector: output.reshape((1,-1))})
+
+	return gb_grad_value[0] 
+
+
+def visualize(img, cam, filename,gb_viz):
+    img = img / 255.0
+    gb_viz = np.dstack((
+            gb_viz[:, :, 2],
+            gb_viz[:, :, 1],
+            gb_viz[:, :, 0],
+        ))
+
+    gb_viz -= np.min(gb_viz)
+    gb_viz /= gb_viz.max()
+  
+    fig, ax = plt.subplots(nrows=1,ncols=3)
+
+    plt.subplot(141)
+    plt.axis("off")
+    imgplot = plt.imshow(img)
+
+    plt.subplot(142)
+    gd_img = gb_viz*np.minimum(0.25,cam).reshape(224,224,1)
+    x = gd_img
+    x = np.squeeze(x)
+    
+    #normalize tensor
+    x -= x.mean()
+    x /= (x.std() + 1e-5)
+    x *= 0.1
+
+    # clip to [0, 1]
+    x += 0.5
+    x = np.clip(x, 0, 1)
+
+    # convert to RGB array
+    x *= 255
+   
+    x = np.clip(x, 0, 255).astype('uint8')
+
+    plt.axis("off")
+    imgplot = plt.imshow(x, vmin = 0, vmax = 20)
+
+    cam = (cam*-1.0) + 1.0
+    cam_heatmap = np.array(cv2.applyColorMap(np.uint8(255*cam), cv2.COLORMAP_JET))
+    plt.subplot(143)
+    plt.axis("off")
+
+    imgplot = plt.imshow(cam_heatmap)
+
+    plt.subplot(144)
+    plt.axis("off")
+    
+    cam_heatmap = cam_heatmap/255.0
+
+    fin = (img*0.7) + (cam_heatmap*0.3)
+    imgplot = plt.imshow(fin)
+
+    plt.savefig("../Results/opposite" + filename, dpi=600)
+    plt.close(fig)
+
+
+
+radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
 images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
@@ -67,7 +161,7 @@ labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
 
 
-im_name = "N1_L.png"
+im_name = "N12_L.png"
 label_id = 0
 
 test_index = [np.where(names_all==im_name)[0][0]]
@@ -110,7 +204,7 @@ w = np.array(w)
 
 init = tf.global_variables_initializer()
 with tf.Session(config=config) as sess:
-    with tf.name_scope("vgg_content"):
+    with tf.name_scope("content_vgg"):
         vgg = vgg19.Vgg19SVM(last_layer_weights=[w, np.float32([-biases[0], biases[0]])])
     #define your tensor placeholders for, labels and images
     label_vector = tf.placeholder("float", [None, 2])
@@ -141,7 +235,6 @@ with tf.Session(config=config) as sess:
     triple_derivative = tf.exp(cost)[0][label_index]*target_conv_layer_grad*target_conv_layer_grad*target_conv_layer_grad  
 
     img1 = images_all[test_index][0]
-        
     output = [0.0]*vgg.prob.get_shape().as_list()[1] #one-hot embedding for desired class activations
         #creating the output vector for the respective class
     print("Pre-sess.run")
@@ -203,98 +296,4 @@ with tf.Session(config=config) as sess:
     print("Visualizing")
     visualize(img1, cam, im_name.split(".")[0]+"-gradcam.png", gb) 
     print("Done")
-
-def guided_BP(image, label_id = -1):	
-	g = tf.get_default_graph()
-	with g.gradient_override_map({'Relu': 'GuidedRelu'}):
-		label_vector = tf.placeholder("float", [None, 2])
-		input_image = tf.placeholder("float", [None, 224, 224, 3])
-
-		vgg = vgg19.Vgg19SVM(last_layer_weights=[w, np.float32([-biases[0], biases[0]])])
-		with tf.name_scope("content_vgg"):
-		    vgg.build(input_image)
-
-		cost = vgg.fc7*label_vector
-	
-		# Guided backpropagtion back to input layer
-		gb_grad = tf.gradients(cost, input_image)[0]
-
-		init = tf.global_variables_initializer()
-	
-	# Run tensorflow 
-	with tf.Session(graph=g) as sess:    
-		sess.run(init)
-		output = [0.0]*vgg.prob.get_shape().as_list()[1] #one-hot embedding for desired class activations
-		if label_id == -1:
-			prob = sess.run(vgg.prob, feed_dict={input_image:image})
-
-			#creating the output vector for the respective class
-			index = np.argmax(prob)
-			print("Predicted_class: " + str(index))
-			output[index] = 1.0
-
-		else:
-			output[label_id] = 1.0
-		output = np.array(output)
-		gb_grad_value = sess.run(gb_grad, feed_dict={input_image:image, label_vector: output.reshape((1,-1))})
-
-	return gb_grad_value[0] 
-
-
-def visualize(img, cam, filename,gb_viz):
-    gb_viz = np.dstack((
-            gb_viz[:, :, 2],
-            gb_viz[:, :, 1],
-            gb_viz[:, :, 0],
-        ))
-
-    gb_viz -= np.min(gb_viz)
-    gb_viz /= gb_viz.max()
-  
-    fig, ax = plt.subplots(nrows=1,ncols=3)
-
-    plt.subplot(141)
-    plt.axis("off")
-    imgplot = plt.imshow(img)
-
-    plt.subplot(142)
-    gd_img = gb_viz*np.minimum(0.25,cam).reshape(224,224,1)
-    x = gd_img
-    x = np.squeeze(x)
-    
-    #normalize tensor
-    x -= x.mean()
-    x /= (x.std() + 1e-5)
-    x *= 0.1
-
-    # clip to [0, 1]
-    x += 0.5
-    x = np.clip(x, 0, 1)
-
-    # convert to RGB array
-    x *= 255
-   
-    x = np.clip(x, 0, 255).astype('uint8')
-
-    plt.axis("off")
-    imgplot = plt.imshow(x, vmin = 0, vmax = 20)
-
-    cam = (cam*-1.0) + 1.0
-    cam_heatmap = np.array(cv2.applyColorMap(np.uint8(255*cam), cv2.COLORMAP_JET))
-    plt.subplot(143)
-    plt.axis("off")
-
-    imgplot = plt.imshow(cam_heatmap)
-
-    plt.subplot(144)
-    plt.axis("off")
-    
-    cam_heatmap = cam_heatmap/255.0
-
-    fin = (img*0.7) + (cam_heatmap*0.3)
-    imgplot = plt.imshow(fin)
-
-    plt.savefig("./output/" + filename, dpi=600)
-    plt.close(fig)
-
 
