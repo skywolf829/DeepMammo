@@ -37,8 +37,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -127,7 +127,7 @@ kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
 for_tsne = np.zeros(len(labels_all))
-
+conf_roc = np.zeros(len(labels_all))
 #for train_index, test_index in kf.split(codes_all):
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
@@ -135,32 +135,71 @@ for train_index, test_index in loo.split(codes_all):
     clf.fit(X_train, y_train)
     predictions[test_index] = clf.predict(X_test)
     confidence[test_index] = abs(clf.decision_function(X_test))
+    conf_roc[test_index] = clf.decision_function(X_test)
     for_tsne[test_index] = clf.decision_function(X_test)
 
-utility_functions.printListInOrder(predictions)
+tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
+acc = accuracy_score(labels_all, predictions)
+fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
+roc_auc = auc(fpr, tpr)
+plt.plot(fpr, tpr, 'darkorange',
+         label='AUC = %0.2f'% roc_auc)
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("ROC Curve: Machine")
+plt.plot([0, 1], [0, 1], color='#67809f', linestyle='--')
+plt.xlim([-0.1, 1.0])
+plt.ylim([-0.1, 1.0])
+plt.ylabel('True Positive Rate', fontsize=14)
+plt.xlabel('False Positive Rate', fontsize=14)
+plt.show()
+print("Machine accuracy: " + str(acc))
+print("Machine FPR: " + str(fp/len(labels_normal)))
+print("Machine TPR: " + str(tp/len(labels_cancer)))
+print("Machine AUC: " + str(roc_auc))
+
+#utility_functions.printListInOrder(predictions)
 # if testing human + AI
 i = 0
 while i < len(names_all):
     if confidence[i] < radio_input_confidence[names_all[i]]:
         predictions[i] = radio_input_classify[names_all[i]]
+        conf_roc[i] = radio_input_classify[names_all[i]]
+        if(predictions[i] == 0):
+            conf_roc[i] = -conf_roc[i]
     i = i + 1   
 # end testing human + AI     
-
-fpr, tpr, thresholds = roc_curve(labels_all, predictions)
+fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
 roc_auc = auc(fpr, tpr)
+
+plt.plot(fpr, tpr, 'darkorange',
+         label='AUC = %0.2f'% roc_auc)
+plt.legend(loc='lower right', fontsize='x-large')
+plt.title("ROC Curve: Machine + Radiologist")
+plt.plot([0, 1], [0, 1], color='#67809f', linestyle='--')
+plt.xlim([-0.1, 1.0])
+plt.ylim([-0.1, 1.0])
+plt.ylabel('True Positive Rate', fontsize=14)
+plt.xlabel('False Positive Rate', fontsize=14)
+plt.show()
 
 ROCs = []
 for iteration in range(1000):
     indices = resample(range(len(predictions)), random_state=iteration)
     sample_predictions = predictions[indices]
+    sample_scores = conf_roc[indices]
     sample_labels = labels_all[indices]
-    fpr, tpr, thresholds = roc_curve(sample_labels, sample_predictions)
+    fpr, tpr, thresholds = roc_curve(sample_labels, sample_scores)
     roc_auc_sample = auc(fpr, tpr)
     ROCs.append(roc_auc_sample)
     #print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
 
+tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
+acc = accuracy_score(labels_all, predictions)
 
-print("Initial AUC: " + str(roc_auc))
+print("Machine+radiologist accuracy: " + str(acc))
+print("Machine+radiologist FPR: " + str(fp/len(labels_normal)))
+print("Machine+radiologist TPR: " + str(tp/len(labels_cancer)))
+print("Machine+radiologist AUC: " + str(roc_auc))
 print("Avg AUC: " + str(np.average(ROCs)))
 print("STDev of CV AUC: " + str(np.std(ROCs)))
 print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
@@ -184,11 +223,20 @@ print("95% CI for CV AUC 3: " + str(lower) + " to " + str(upper))
 
 i = 0
 radio_prediction_list = []
+radio_conf_list = []
 while i < len(names_all):
     radio_prediction_list.append(radio_input_classify[names_all[i]])
+    radio_conf_list.append(radio_input_confidence[names_all[i]])
+    if(radio_prediction_list[i] == 0):
+        radio_conf_list[i] = -radio_conf_list[i]
     i = i + 1
 fpr, tpr, thresholds = roc_curve(labels_all, radio_prediction_list)
 roc_auc = auc(fpr, tpr)
+tn, fp, fn, tp = confusion_matrix(labels_all, radio_prediction_list).ravel()
+acc = accuracy_score(labels_all, radio_prediction_list)
+print("Radiologist accuracy: " + str(acc))
+print("Radiologist FPR: " + str(fp/len(labels_normal)))
+print("Radiologist TPR: " + str(tp/len(labels_cancer)))
 print("Radiologist AUC: " + str(roc_auc))
 #plt.hist(ROCs)
 #plt.show()
@@ -205,7 +253,7 @@ for i in range(len(for_tsne)):
    final_values.append([for_tsne[i][0]])
    for item in pca_codes[i]:
        final_values[i].append(item)
-tsne_embedding = TSNE(n_components=2, perplexity=30, init='random', learning_rate=200, n_iter=10000, random_state=0).fit_transform(final_values)
+tsne_embedding = TSNE(n_components=2, perplexity=60, init='random', learning_rate=200, n_iter=10000, random_state=0).fit_transform(final_values)
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 ax.scatter(tsne_embedding[0:len(codes_normal),0], tsne_embedding[0:len(codes_normal),1], edgecolors='none', c="blue", label="normal")
