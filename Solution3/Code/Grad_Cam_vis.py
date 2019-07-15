@@ -125,7 +125,7 @@ def visualize(img, cam, filename,gb_viz):
     fin = (img*0.7) + (cam_heatmap*0.3)
     imgplot = plt.imshow(fin)
 
-    plt.savefig("../Images/GradCamVisualizations/Cropped/"+filename, dpi=600)
+    plt.savefig("../Images/GradCamVisualizations/CroppedSameDirection/"+filename, dpi=600)
     plt.close(fig)
 
 def run_viz(image_name, label_to_visualize):
@@ -268,8 +268,8 @@ def run_viz(image_name, label_to_visualize):
 
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
