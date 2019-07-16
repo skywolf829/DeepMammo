@@ -30,6 +30,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import scipy
 import json
+import lightgbm as lgb
 
 codes_path = './codes'
 labels_path = './labels'
@@ -65,8 +66,14 @@ names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
 images_all = np.append(images_normal, images_cancer, axis=0)
 
+rotate90 = utility_functions.rotateImages(images_all, 90, False, False)
+rotate180 = utility_functions.rotateImages(images_all, 180, False, False)
+rotate270 = utility_functions.rotateImages(images_all, 270, False, False)
 
-
+mirrored = utility_functions.rotateImages(images_all, None, False, True)
+rotate90mirrored = utility_functions.rotateImages(rotate90, None, False, True)
+rotate180mirrored = utility_functions.rotateImages(rotate180, None, False, True)
+rotate270mirrored = utility_functions.rotateImages(rotate270, None, False, True)
 
 sess = tf.Session()
 print("Session start")
@@ -79,65 +86,61 @@ with tf.name_scope("content_vgg"):
 feed_dict_all = {input_: images_all}
 feed_dict_normal = {input_: images_normal}
 feed_dict_cancer = {input_: images_cancer}
+feed_dict_90 = {input_: rotate90}
+feed_dict_180 = {input_: rotate180}
+feed_dict_270 = {input_: rotate270}
+feed_dict_mirrored = {input_: mirrored}
+feed_dict_90mirrored = {input_: rotate90mirrored}
+feed_dict_180mirrored = {input_: rotate180mirrored}
+feed_dict_270mirrored = {input_: rotate270mirrored}
+
 codes_normal = sess.run(vgg.relu6, feed_dict=feed_dict_normal)
 codes_cancer = sess.run(vgg.relu6, feed_dict=feed_dict_cancer)
 codes_all = np.append(codes_normal, codes_cancer, axis=0)
+codes_all_90 = sess.run(vgg.relu6, feed_dict=feed_dict_90)
+codes_all_180 = sess.run(vgg.relu6, feed_dict=feed_dict_180)
+codes_all_270 = sess.run(vgg.relu6, feed_dict=feed_dict_270)
+codes_all_mirrored = sess.run(vgg.relu6, feed_dict=feed_dict_mirrored)
+codes_all_90mirrored = sess.run(vgg.relu6, feed_dict=feed_dict_90mirrored)
+codes_all_180mirrored = sess.run(vgg.relu6, feed_dict=feed_dict_180mirrored)
+codes_all_270mirrored = sess.run(vgg.relu6, feed_dict=feed_dict_270mirrored)
 sess.close()
 
+final_feature_fectors = np.concatenate((codes_all, codes_all_90, codes_all_180, codes_all_270, codes_all_mirrored, codes_all_90mirrored, codes_all_180mirrored, codes_all_270mirrored), axis=1)
+#labels_all = np.concatenate((labels_all, labels_all, labels_all, labels_all, labels_all, labels_all, labels_all, labels_all), axis=0)
+pca = PCA(n_components=50).fit(final_feature_fectors)
+clf = LinearSVC(C=0.001, max_iter=1000000)
 
-
-
-clf = LinearSVC(C=0.0001)
-
-
-# For 10-fold CV
-"""
-scores = []
-ROCs = []
-for iteration in range(1000):    
-    skf = KFold(n_splits=10, shuffle=True, random_state=iteration)
-    for train_index, test_index in skf.split(codes_all, labels_all):
-        X_train, X_test = codes_all[train_index], codes_all[test_index]
-        y_train, y_test = labels_all[train_index], labels_all[test_index]
-        clf.fit(X_train, y_train)
-        scores.append(clf.score(X_test, y_test))
-        fpr, tpr, thresholds = roc_curve(y_test, clf.decision_function(X_test))
-        roc_auc = auc(fpr, tpr)
-        ROCs.append(roc_auc)
-        print(str(iteration) + " AUC: " + str(ROCs[len(ROCs)-1]))
-
-                       
-print("Avg CV score: " + str(np.average(scores)))
-print("STDev of CV score: " + str(np.std(scores)))
-print("StdErr of CV score: " + str(stats.sem(scores)))
-print("95% CI for CV score: " + str(np.average(scores) - 1.96 * stats.sem(scores)) + " to " + str(np.average(scores) + 1.96 * stats.sem(scores)))
-print("Avg CV AUC: " + str(np.average(ROCs)))
-print("STDev of CV score: " + str(np.std(ROCs)))
-print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
-print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * stats.sem(ROCs)) + " to " + str(np.average(ROCs) + 1.96 * stats.sem(ROCs)))
-
-"""
 # For LOO and Bootstrapping
 
 # Arek's suggestion to see stdev with 80% of training set used.
 #codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
 
 loo = LeaveOneOut()
-kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
 for_tsne = np.zeros(len(labels_all))
 conf_roc = np.zeros(len(labels_all))
-#for train_index, test_index in kf.split(codes_all):
 for train_index, test_index in loo.split(codes_all):   
-    X_train, X_test = codes_all[train_index], codes_all[test_index]
-    y_train, y_test = labels_all[train_index], labels_all[test_index]
+    X_train = np.concatenate((codes_all[train_index], codes_all_90[train_index], codes_all_180[train_index], codes_all_270[train_index], codes_all_mirrored[train_index], codes_all_90mirrored[train_index], codes_all_180mirrored[train_index], codes_all_270mirrored[train_index]), axis=1)
+    X_train = pca.transform(X_train)
+    #X_test = codes_all[test_index]
+    X_test = np.concatenate((codes_all[test_index], codes_all_90[test_index], codes_all_180[test_index], codes_all_270[test_index], codes_all_mirrored[test_index], codes_all_90mirrored[test_index], codes_all_180mirrored[test_index], codes_all_270mirrored[test_index]), axis=1)
+    X_test = pca.transform(X_test)
+    #y_train = np.concatenate((labels_all[train_index],labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index]), axis=0)
+    y_train = labels_all[train_index]
+    y_test = labels_all[test_index]
     clf.fit(X_train, y_train)
     predictions[test_index] = clf.predict(X_test)
     confidence[test_index] = abs(clf.decision_function(X_test))
     conf_roc[test_index] = clf.decision_function(X_test)
     for_tsne[test_index] = clf.decision_function(X_test)
+    print("Finished LOO split " + str(test_index))
+    print(X_train.shape)
+    print(y_train.shape)
 
+utility_functions.printListInOrder(predictions)
+#utility_functions.printListInOrder(confidence)
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
@@ -167,6 +170,8 @@ while i < len(names_all):
         if(predictions[i] == 0):
             conf_roc[i] = -conf_roc[i]
     i = i + 1   
+
+#utility_functions.printListInOrder(predictions)
 # end testing human + AI     
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
 roc_auc = auc(fpr, tpr)
@@ -245,7 +250,7 @@ print("Radiologist AUC: " + str(roc_auc))
 # Creates a TSNE plot for the deep features generated
 for_tsne = for_tsne.reshape(-1, 1)
 pca_50 = PCA(n_components=50)
-pca_codes = pca_50.fit_transform(codes_all)
+pca_codes = pca_50.fit_transform(final_feature_fectors)
 scaler = MinMaxScaler()
 pca_codes = scaler.fit_transform(pca_codes)
 final_values = []
@@ -265,7 +270,7 @@ plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne
 plt.show()
 
 """
-with open('../Results/ROCsNoCropSameDir.txt', 'w') as f:
+with open('../Results/ROCsNoCropAllRotations.txt', 'w') as f:
     for item in ROCs:
         f.write("%s\n" % item)
 with open('../Results/predictionsNoCropSameDir.txt', 'w') as f:

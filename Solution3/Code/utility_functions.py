@@ -117,6 +117,20 @@ def loadImagesFromDir(dirs, classification):
             names.append(file)
     return batch, labels, names
 
+
+def rotateImages(img_array, degrees, mirrorUpDown, mirrorLeftRight):
+    rotated_imgs = []
+    for img in img_array:
+        img = Image.fromarray(img, 'RGB')
+        if(degrees is not None):
+            img.rotate(degrees)
+        if(mirrorLeftRight):
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        if(mirrorUpDown):
+            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+        rotated_imgs.append(img_to_array(img))
+    return rotated_imgs
+         
 """
 Loads a csv file with average responses for images to be classified as cancerous or normal.
 
