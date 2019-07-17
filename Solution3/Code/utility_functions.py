@@ -13,7 +13,8 @@ import argparse
 #import tensorflowvgg.vgg19 as vgg19
 from PIL import Image, ImageFilter, ImageChops
 import cv2
-
+import torch
+import pretrainedmodels.utils as utils
 """
 Takes a directory and splits it into a group of training and testing data.
 
@@ -81,6 +82,43 @@ Deletes all files in a specific directory. Used in createTestTrainSplitForAllIma
 def deleteFilesInDirectory(directory):
     for file in os.listdir(directory):
         os.remove(file)
+
+"""
+Used in classifier.py and classifier_auc.py to load images and labels from multiple directories.
+
+Inputs:
+dirs - the folders that hold images of one class
+classification - the labels for the ith index of dirs
+
+Returns:
+batch - a single batch of size [N, 3, 244, 244] of all images within the directories, with N=num images in each directory within dirs
+labels - a list of size [N, 1] where each entry is the class for the ith index of batch
+"""
+def loadImagesFromDirTorch(dirs, classification, model):    
+    labels = []
+    batch = []
+    names = []
+    load_img = utils.LoadImage()
+    tf_img = utils.TransformImage(model)
+    for dir_i in range(len(dirs)):
+        class_x = classification[dir_i]
+        dir_x = dirs[dir_i]
+        print("Loading class " + str(class_x) + " from " + str(dir_x))
+        files = os.listdir(dir_x)
+        for i, file in enumerate(files, 1):
+            # Add images to the current batch
+            #print(i)
+            file_name = os.path.join(dir_x, file)
+            #print(file_name)
+            input_img = load_img(file_name)
+            input_tensor = tf_img(input_img)
+            #print("Shape of imgarr:")
+            #print(img_arr.shape)
+            batch.append(input_tensor.numpy())  # change according to original script
+            #print(np.shape(batch))
+            labels.append(class_x)
+            names.append(file)
+    return batch, labels, names
 
 """
 Used in classifier.py and classifier_auc.py to load images and labels from multiple directories.

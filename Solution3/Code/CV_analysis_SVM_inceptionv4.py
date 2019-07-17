@@ -31,6 +31,11 @@ import matplotlib.pyplot as plt
 import scipy
 import json
 import lightgbm as lgbm
+import torch
+import pretrainedmodels
+
+inception_v4 = pretrainedmodels.inceptionv4()
+
 
 codes_path = './codes'
 labels_path = './labels'
@@ -38,8 +43,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Normal",), (0,), inception_v4)
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Cancer",), (1,), inception_v4)
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -64,29 +69,19 @@ while i < len(names_cancer):
 
 names_all = np.append(names_normal, names_cancer, axis=0)
 labels_all = np.append(labels_normal, labels_cancer, axis=0)
-images_all = np.append(images_normal, images_cancer, axis=0)
 
-
-
-
-sess = tf.Session()
-print("Session start")
-
-vgg = vgg19.Vgg19()
-input_ = tf.placeholder(tf.float32, [None, 224, 224, 3])
-with tf.name_scope("content_vgg"):
-    vgg.build(input_)
-# Get the values from the relu6 layer of the VGG network
-feed_dict_all = {input_: images_all}
-feed_dict_normal = {input_: images_normal}
-feed_dict_cancer = {input_: images_cancer}
-codes_normal = sess.run(vgg.relu6, feed_dict=feed_dict_normal)
-codes_cancer = sess.run(vgg.relu6, feed_dict=feed_dict_cancer)
-codes_all = np.append(codes_normal, codes_cancer, axis=0)
-sess.close()
-
-
-
+images_all = []
+for img in images_normal:
+    images_all.append(img)
+for img in images_cancer:
+    images_all.append(img)
+images_all = np.array(images_all)
+print(images_all.shape)
+images_all = torch.from_numpy(images_all)
+print(images_all.size())
+codes_all = inception_v4.features(images_all)
+print(codes_all)
+codes_all = codes_all.numpy
 
 clf = LinearSVC(C=0.0001)
 params = {}
@@ -99,45 +94,16 @@ params['num_leaves'] = 10000000
 params['min_data'] = 4096
 params['max_depth'] = 10000000
 
-# For 10-fold CV
-"""
-scores = []
-ROCs = []
-for iteration in range(1000):    
-    skf = KFold(n_splits=10, shuffle=True, random_state=iteration)
-    for train_index, test_index in skf.split(codes_all, labels_all):
-        X_train, X_test = codes_all[train_index], codes_all[test_index]
-        y_train, y_test = labels_all[train_index], labels_all[test_index]
-        clf.fit(X_train, y_train)
-        scores.append(clf.score(X_test, y_test))
-        fpr, tpr, thresholds = roc_curve(y_test, clf.decision_function(X_test))
-        roc_auc = auc(fpr, tpr)
-        ROCs.append(roc_auc)
-        print(str(iteration) + " AUC: " + str(ROCs[len(ROCs)-1]))
-
-                       
-print("Avg CV score: " + str(np.average(scores)))
-print("STDev of CV score: " + str(np.std(scores)))
-print("StdErr of CV score: " + str(stats.sem(scores)))
-print("95% CI for CV score: " + str(np.average(scores) - 1.96 * stats.sem(scores)) + " to " + str(np.average(scores) + 1.96 * stats.sem(scores)))
-print("Avg CV AUC: " + str(np.average(ROCs)))
-print("STDev of CV score: " + str(np.std(ROCs)))
-print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
-print("95% CI for CV AUC: " + str(np.average(ROCs) - 1.96 * stats.sem(ROCs)) + " to " + str(np.average(ROCs) + 1.96 * stats.sem(ROCs)))
-
-"""
 # For LOO and Bootstrapping
 
 # Arek's suggestion to see stdev with 80% of training set used.
 #codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
 
 loo = LeaveOneOut()
-kf = KFold(n_splits = 5, shuffle=True, random_state=1395)
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
 for_tsne = np.zeros(len(labels_all))
 conf_roc = np.zeros(len(labels_all))
-#for train_index, test_index in kf.split(codes_all):
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
