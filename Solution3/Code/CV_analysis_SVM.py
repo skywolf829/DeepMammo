@@ -84,7 +84,7 @@ codes_normal = sess.run(vgg.relu6, feed_dict=feed_dict_normal)
 codes_cancer = sess.run(vgg.relu6, feed_dict=feed_dict_cancer)
 codes_all = np.append(codes_normal, codes_cancer, axis=0)
 sess.close()
-
+print(codes_all)
 
 
 

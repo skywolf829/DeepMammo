@@ -33,9 +33,10 @@ import json
 import lightgbm as lgbm
 import torch
 import pretrainedmodels
+import pretrainedmodels.utils as utils
 
-inception_v4 = pretrainedmodels.inceptionv4()
-
+model = pretrainedmodels.vgg19(num_classes=1000, pretrained='imagenet')
+model.eval()
 
 codes_path = './codes'
 labels_path = './labels'
@@ -43,8 +44,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Normal",), (0,), inception_v4)
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Cancer",), (1,), inception_v4)
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Normal",), (0,), model)
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Cancer",), (1,), model)
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -79,9 +80,16 @@ images_all = np.array(images_all)
 print(images_all.shape)
 images_all = torch.from_numpy(images_all)
 print(images_all.size())
-codes_all = inception_v4.features(images_all)
+
+print(model._modules['relu0'])
+codes_all = model.features(images_all)
+print(codes_all.size())
+codes_all = codes_all.detach().numpy()
 print(codes_all)
-codes_all = codes_all.numpy
+
+
+codes_normal = codes_all[0:len(names_normal)]
+codes_cancer = codes_all[len(names_normal):len(codes_all)]
 
 clf = LinearSVC(C=0.0001)
 params = {}
@@ -96,9 +104,6 @@ params['max_depth'] = 10000000
 
 # For LOO and Bootstrapping
 
-# Arek's suggestion to see stdev with 80% of training set used.
-#codes_all, _, labels_all, _ = train_test_split(codes_all, labels_all, test_size=0.2, random_state=13)
-
 loo = LeaveOneOut()
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
@@ -109,7 +114,7 @@ for train_index, test_index in loo.split(codes_all):
     y_train, y_test = labels_all[train_index], labels_all[test_index]
     clf.fit(X_train, y_train)
     predictions[test_index] = clf.predict(X_test)
-    print(predictions[test_index])
+    print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
     confidence[test_index] = abs(clf.decision_function(X_test))
     conf_roc[test_index] = clf.decision_function(X_test)
     for_tsne[test_index] = clf.decision_function(X_test)
