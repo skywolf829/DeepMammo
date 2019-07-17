@@ -38,8 +38,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Cropped/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cropped/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -95,9 +95,10 @@ params['boosting_type'] = 'gbdt'
 params['objective'] = 'binary'
 params['metric'] = 'binary_logloss'
 params['sub_feature'] = 0.5
-params['num_leaves'] = 10000000
-params['min_data'] = 4096
-params['max_depth'] = 10000000
+params['num_leaves'] = 10
+params['min_data'] = 1
+params['max_depth'] = 1000
+params['min_hess'] = 0
 
 # For 10-fold CV
 """
@@ -141,12 +142,13 @@ conf_roc = np.zeros(len(labels_all))
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
-    clf.fit(X_train, y_train)
-    predictions[test_index] = clf.predict(X_test)
-    print(predictions[test_index])
-    confidence[test_index] = abs(clf.decision_function(X_test))
-    conf_roc[test_index] = clf.decision_function(X_test)
-    for_tsne[test_index] = clf.decision_function(X_test)
+    #clf.fit(X_train, y_train)
+    clf = lgbm.train(params, lgbm.Dataset(X_train, y_train), 100)
+    predictions[test_index] = 1 if clf.predict(X_test) > 0.5 else 0
+    #print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
+    confidence[test_index] = clf.predict(X_test)#abs(clf.decision_function(X_test))
+    conf_roc[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
+    for_tsne[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
 
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)

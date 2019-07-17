@@ -98,7 +98,7 @@ def loadImagesFromDirTorch(dirs, classification, model):
     labels = []
     batch = []
     names = []
-    load_img = utils.LoadImage()
+    load_img_pretrainedmodels = utils.LoadImage()
     tf_img = utils.TransformImage(model)
     for dir_i in range(len(dirs)):
         class_x = classification[dir_i]
@@ -106,16 +106,15 @@ def loadImagesFromDirTorch(dirs, classification, model):
         print("Loading class " + str(class_x) + " from " + str(dir_x))
         files = os.listdir(dir_x)
         for i, file in enumerate(files, 1):
-            # Add images to the current batch
-            #print(i)
             file_name = os.path.join(dir_x, file)
-            #print(file_name)
-            input_img = load_img(file_name)
+
+            #input_img = np.array(load_img(file_name, target_size=(224,244))).astype(np.single)
+            #batch.append(np.swapaxes(np.swapaxes(input_img, 0, 2), 1, 2))
+
+            input_img = load_img_pretrainedmodels(file_name)
             input_tensor = tf_img(input_img)
-            #print("Shape of imgarr:")
-            #print(img_arr.shape)
-            batch.append(input_tensor.numpy())  # change according to original script
-            #print(np.shape(batch))
+            batch.append(input_tensor.numpy())
+
             labels.append(class_x)
             names.append(file)
     return batch, labels, names

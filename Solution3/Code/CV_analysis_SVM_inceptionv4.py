@@ -34,9 +34,31 @@ import lightgbm as lgbm
 import torch
 import pretrainedmodels
 import pretrainedmodels.utils as utils
+import types
+
+def new_forward_vgg19(self, x):
+    # conv1
+    print("input " + str(x.size()))
+    #x1 = self._modules["avgpool"](x)
+    #print("x1 " + str(x1.size()))
+    x1 = self._modules["_features"](x)
+    print("x1 " + str(x1.size()))
+    x1 = torch.Tensor.flatten(x1, 1, -1)
+    print("x1 " + str(x1.size()))
+    x2 = self._modules["linear0"](x1)
+    print("x2 " + str(x2.size()))
+    x3 = self._modules["relu0"](x2)
+    print("x3 " + str(x3.size()))
+    return x3
 
 model = pretrainedmodels.vgg19(num_classes=1000, pretrained='imagenet')
 model.eval()
+model.forward = types.MethodType(new_forward_vgg19, model)
+
+
+for param in model.parameters():
+    param.requires_grad = False
+model.cuda(device="cuda")
 
 codes_path = './codes'
 labels_path = './labels'
@@ -44,8 +66,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Normal",), (0,), model)
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cropped/Cancer",), (1,), model)
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Normal",), (0,), model)
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cancer",), (1,), model)
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -77,30 +99,39 @@ for img in images_normal:
 for img in images_cancer:
     images_all.append(img)
 images_all = np.array(images_all)
-print(images_all.shape)
 images_all = torch.from_numpy(images_all)
-print(images_all.size())
+images_all = images_all.cuda()
 
-print(model._modules['relu0'])
-codes_all = model.features(images_all)
-print(codes_all.size())
+#for item in model.named_children():
+    #print(item)
+codes_all = model(images_all)
+
+#codes_all = model.features(images_all)
+#codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
+
+codes_all = codes_all.cpu()
 codes_all = codes_all.detach().numpy()
-print(codes_all)
+#print(codes_all.shape)
 
+print(codes_all)
 
 codes_normal = codes_all[0:len(names_normal)]
 codes_cancer = codes_all[len(names_normal):len(codes_all)]
 
-clf = LinearSVC(C=0.0001)
+
+clf = LinearSVC(C=10000)
+#clf = SVC(C=10, kernel="rbf", gamma="scale")
+
 params = {}
 params['learning_rate'] = 0.003
 params['boosting_type'] = 'gbdt'
 params['objective'] = 'binary'
 params['metric'] = 'binary_logloss'
 params['sub_feature'] = 0.5
-params['num_leaves'] = 10000000
-params['min_data'] = 4096
-params['max_depth'] = 10000000
+params['num_leaves'] = 10
+params['min_data'] = 1
+params['max_depth'] = 1000
+params['min_hess'] = 0
 
 # For LOO and Bootstrapping
 
@@ -112,12 +143,13 @@ conf_roc = np.zeros(len(labels_all))
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
-    clf.fit(X_train, y_train)
-    predictions[test_index] = clf.predict(X_test)
-    print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
-    confidence[test_index] = abs(clf.decision_function(X_test))
-    conf_roc[test_index] = clf.decision_function(X_test)
-    for_tsne[test_index] = clf.decision_function(X_test)
+    #clf.fit(X_train, y_train)
+    clf = lgbm.train(params, lgbm.Dataset(X_train, y_train), 100)
+    predictions[test_index] = 1 if clf.predict(X_test) > 0.5 else 0
+    #print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
+    confidence[test_index] = clf.predict(X_test)#abs(clf.decision_function(X_test))
+    conf_roc[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
+    for_tsne[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
 
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)
