@@ -30,7 +30,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import scipy
 import json
-import lightgbm as lgb
+import lightgbm as lgbm
 
 codes_path = './codes'
 labels_path = './labels'
@@ -38,8 +38,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
 
 # If only using images that have radiologist response
 i = 0
@@ -109,8 +109,18 @@ sess.close()
 
 final_feature_fectors = np.concatenate((codes_all, codes_all_90, codes_all_180, codes_all_270, codes_all_mirrored, codes_all_90mirrored, codes_all_180mirrored, codes_all_270mirrored), axis=1)
 #labels_all = np.concatenate((labels_all, labels_all, labels_all, labels_all, labels_all, labels_all, labels_all, labels_all), axis=0)
-pca = PCA(n_components=50).fit(final_feature_fectors)
-clf = LinearSVC(C=0.001, max_iter=1000000)
+pca = PCA(n_components=83).fit(final_feature_fectors)
+clf = LinearSVC(C=0.1, max_iter=10000)
+params = {}
+params['learning_rate'] = 0.003
+params['boosting_type'] = 'gbdt'
+params['objective'] = 'binary'
+params['metric'] = 'binary_logloss'
+params['sub_feature'] = 0.5
+params['num_leaves'] = 10
+params['min_data'] = 1
+params['max_depth'] = 1000
+params['min_hess'] = 0
 
 # For LOO and Bootstrapping
 
@@ -131,14 +141,13 @@ for train_index, test_index in loo.split(codes_all):
     #y_train = np.concatenate((labels_all[train_index],labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index], labels_all[train_index]), axis=0)
     y_train = labels_all[train_index]
     y_test = labels_all[test_index]
-    clf.fit(X_train, y_train)
-    predictions[test_index] = clf.predict(X_test)
-    confidence[test_index] = abs(clf.decision_function(X_test))
-    conf_roc[test_index] = clf.decision_function(X_test)
-    for_tsne[test_index] = clf.decision_function(X_test)
-    print("Finished LOO split " + str(test_index))
-    print(X_train.shape)
-    print(y_train.shape)
+    #clf.fit(X_train, y_train)
+    clf = lgbm.train(params, lgbm.Dataset(X_train, y_train), 100)
+    predictions[test_index] = 1 if clf.predict(X_test) > 0.5 else 0
+    #print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
+    confidence[test_index] = clf.predict(X_test)#abs(clf.decision_function(X_test))
+    conf_roc[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
+    for_tsne[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
 
 utility_functions.printListInOrder(predictions)
 #utility_functions.printListInOrder(confidence)

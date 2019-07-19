@@ -51,9 +51,9 @@ def new_forward_vgg19(self, x):
     print("x3 " + str(x3.size()))
     return x3
 
-model = pretrainedmodels.vgg19(num_classes=1000, pretrained='imagenet')
+model = pretrainedmodels.inceptionv4(num_classes=1000, pretrained='imagenet')
 model.eval()
-model.forward = types.MethodType(new_forward_vgg19, model)
+#model.forward = types.MethodType(new_forward_vgg19, model)
 
 
 for param in model.parameters():
@@ -66,8 +66,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/Normal",), (0,), model)
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/Cancer",), (1,), model)
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/NoCropForAnalysis/Normal",), (0,), model)
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/NoCropForAnalysis/Cancer",), (1,), model)
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -99,27 +99,91 @@ for img in images_normal:
 for img in images_cancer:
     images_all.append(img)
 images_all = np.array(images_all)
+
+rotate90 = utility_functions.rotateImages(images_all, 90, False, False, swapaxes=True, numpy=True)
+rotate180 = utility_functions.rotateImages(images_all, 180, False, False, swapaxes=True, numpy=True)
+rotate270 = utility_functions.rotateImages(images_all, 270, False, False, swapaxes=True, numpy=True)
+
+mirrored = utility_functions.rotateImages(images_all, None, False, True, swapaxes=True, numpy=True)
+rotate90mirrored = utility_functions.rotateImages(rotate90, None, False, True, swapaxes=True, numpy=True)
+rotate180mirrored = utility_functions.rotateImages(rotate180, None, False, True, swapaxes=True, numpy=True)
+rotate270mirrored = utility_functions.rotateImages(rotate270, None, False, True, swapaxes=True, numpy=True)
+
 images_all = torch.from_numpy(images_all)
+rotate90 = torch.from_numpy(rotate90)
+rotate180 = torch.from_numpy(rotate180)
+rotate270 = torch.from_numpy(rotate270)
+mirrored = torch.from_numpy(mirrored)
+rotate90mirrored = torch.from_numpy(rotate90mirrored)
+rotate180mirrored = torch.from_numpy(rotate180mirrored)
+rotate270mirrored = torch.from_numpy(rotate270mirrored)
+
 images_all = images_all.cuda()
+rotate90 = rotate90.cuda()
+rotate180 = rotate180.cuda()
+rotate270 = rotate270.cuda()
+mirrored = mirrored.cuda()
+rotate90mirrored = rotate90mirrored.cuda()
+rotate180mirrored = rotate180mirrored.cuda()
+rotate270mirrored = rotate270mirrored.cuda()
 
 #for item in model.named_children():
     #print(item)
-codes_all = model(images_all)
+#codes_all = model(images_all)
 
-#codes_all = model.features(images_all)
-#codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
+codes_all = model.features(images_all)
+codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
+codes_rotate90 = model.features(rotate90)
+codes_rotate90 = model._modules["avg_pool"](codes_rotate90).flatten(1, -1)
+codes_rotate180 = model.features(rotate180)
+codes_rotate180 = model._modules["avg_pool"](codes_rotate180).flatten(1, -1)
+codes_rotate270 = model.features(rotate270)
+codes_rotate270 = model._modules["avg_pool"](codes_rotate270).flatten(1, -1)
+codes_mirrored = model.features(mirrored)
+codes_mirrored = model._modules["avg_pool"](codes_mirrored).flatten(1, -1)
+codes_rotate90mirrored = model.features(rotate90mirrored)
+codes_rotate90mirrored = model._modules["avg_pool"](codes_rotate90mirrored).flatten(1, -1)
+codes_rotate180mirrored = model.features(rotate180mirrored)
+codes_rotate180mirrored = model._modules["avg_pool"](codes_rotate180mirrored).flatten(1, -1)
+codes_rotate270mirrored = model.features(rotate270mirrored)
+codes_rotate270mirrored = model._modules["avg_pool"](codes_rotate270mirrored).flatten(1, -1)
 
 codes_all = codes_all.cpu()
 codes_all = codes_all.detach().numpy()
+codes_rotate90 = codes_rotate90.cpu()
+codes_rotate90 = codes_rotate90.detach().numpy()
+codes_rotate180 = codes_rotate180.cpu()
+codes_rotate180 = codes_rotate180.detach().numpy()
+codes_rotate270 = codes_rotate270.cpu()
+codes_rotate270 = codes_rotate270.detach().numpy()
+codes_mirrored = codes_mirrored.cpu()
+codes_mirrored = codes_mirrored.detach().numpy()
+codes_rotate90mirrored = codes_rotate90mirrored.cpu()
+codes_rotate90mirrored = codes_rotate90mirrored.detach().numpy()
+codes_rotate180mirrored = codes_rotate180mirrored.cpu()
+codes_rotate180mirrored = codes_rotate180mirrored.detach().numpy()
+codes_rotate270mirrored = codes_rotate270mirrored.cpu()
+codes_rotate270mirrored = codes_rotate270mirrored.detach().numpy()
+
+#codes_all = np.concatenate((codes_all, codes_rotate90, codes_rotate180, codes_rotate270, codes_mirrored, codes_rotate90mirrored, codes_rotate180mirrored, codes_rotate270mirrored), axis=1)
+
+codes_all = codes_all.tolist()
+for i in range(len(names_all)):
+    codes_all[i] = np.concatenate((codes_all[i], [1*1000000] if(radio_input_classify[names_all[i]] == 1) else [-1*1000000]), axis=None)
+    codes_all[i] = np.concatenate((codes_all[i], [radio_input_confidence[names_all[i]]*1000000]), axis=None)
+codes_all = np.array(codes_all)
+
+pca = PCA(n_components=len(codes_all)).fit(codes_all)
+codes_all = pca.transform(codes_all)
 #print(codes_all.shape)
 
-print(codes_all)
+#print(codes_all)
 
 codes_normal = codes_all[0:len(names_normal)]
 codes_cancer = codes_all[len(names_normal):len(codes_all)]
 
 
-clf = LinearSVC(C=10000)
+clf = LinearSVC(C=1000, max_iter=10000)
 #clf = SVC(C=10, kernel="rbf", gamma="scale")
 
 params = {}
@@ -131,7 +195,6 @@ params['sub_feature'] = 0.5
 params['num_leaves'] = 10
 params['min_data'] = 1
 params['max_depth'] = 1000
-params['min_hess'] = 0
 
 # For LOO and Bootstrapping
 
@@ -172,6 +235,7 @@ print("Machine AUC: " + str(roc_auc))
 
 #utility_functions.printListInOrder(predictions)
 # if testing human + AI
+"""
 i = 0
 while i < len(names_all):
     if confidence[i] < radio_input_confidence[names_all[i]]:
@@ -181,6 +245,7 @@ while i < len(names_all):
             conf_roc[i] = -conf_roc[i]
     i = i + 1   
 # end testing human + AI     
+"""
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
 roc_auc = auc(fpr, tpr)
 

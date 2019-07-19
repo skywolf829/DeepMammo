@@ -155,9 +155,12 @@ def loadImagesFromDir(dirs, classification):
     return batch, labels, names
 
 
-def rotateImages(img_array, degrees, mirrorUpDown, mirrorLeftRight):
+def rotateImages(img_array, degrees, mirrorUpDown, mirrorLeftRight, swapaxes=False, numpy=False):
     rotated_imgs = []
     for img in img_array:
+        if(swapaxes):
+            img = np.swapaxes(img, 0, 2)
+            img = np.swapaxes(img, 0, 1)
         img = Image.fromarray(img, 'RGB')
         if(degrees is not None):
             img.rotate(degrees)
@@ -165,7 +168,13 @@ def rotateImages(img_array, degrees, mirrorUpDown, mirrorLeftRight):
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
         if(mirrorUpDown):
             img = img.transpose(Image.FLIP_TOP_BOTTOM)
-        rotated_imgs.append(img_to_array(img))
+        img = img_to_array(img)
+        if(swapaxes):
+            img = np.swapaxes(img, 0, 1)
+            img = np.swapaxes(img, 0, 2)
+        rotated_imgs.append(img)
+    if(numpy):
+        rotated_imgs = np.array(rotated_imgs)
     return rotated_imgs
          
 """
