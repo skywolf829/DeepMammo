@@ -131,20 +131,28 @@ rotate270mirrored = rotate270mirrored.cuda()
     #print(item)
 #codes_all = model(images_all)
 
+#codes_all = model(images_all)
 codes_all = model.features(images_all)
 codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
+#codes_rotate90 = model(rotate90)
 codes_rotate90 = model.features(rotate90)
 codes_rotate90 = model._modules["avg_pool"](codes_rotate90).flatten(1, -1)
+#codes_rotate180 = model(rotate180)
 codes_rotate180 = model.features(rotate180)
 codes_rotate180 = model._modules["avg_pool"](codes_rotate180).flatten(1, -1)
+#codes_rotate270 = model(rotate270)
 codes_rotate270 = model.features(rotate270)
 codes_rotate270 = model._modules["avg_pool"](codes_rotate270).flatten(1, -1)
+#codes_mirrored = model(mirrored)
 codes_mirrored = model.features(mirrored)
 codes_mirrored = model._modules["avg_pool"](codes_mirrored).flatten(1, -1)
+#codes_rotate90mirrored = model(rotate90mirrored)
 codes_rotate90mirrored = model.features(rotate90mirrored)
 codes_rotate90mirrored = model._modules["avg_pool"](codes_rotate90mirrored).flatten(1, -1)
+#codes_rotate180mirrored = model(rotate180mirrored)
 codes_rotate180mirrored = model.features(rotate180mirrored)
 codes_rotate180mirrored = model._modules["avg_pool"](codes_rotate180mirrored).flatten(1, -1)
+#codes_rotate270mirrored = model(rotate270mirrored)
 codes_rotate270mirrored = model.features(rotate270mirrored)
 codes_rotate270mirrored = model._modules["avg_pool"](codes_rotate270mirrored).flatten(1, -1)
 
@@ -169,12 +177,12 @@ codes_rotate270mirrored = codes_rotate270mirrored.detach().numpy()
 
 codes_all = codes_all.tolist()
 for i in range(len(names_all)):
-    codes_all[i] = np.concatenate((codes_all[i], [1*1000000] if(radio_input_classify[names_all[i]] == 1) else [-1*1000000]), axis=None)
-    codes_all[i] = np.concatenate((codes_all[i], [radio_input_confidence[names_all[i]]*1000000]), axis=None)
+    codes_all[i] = np.concatenate((codes_all[i], [1*100] if(radio_input_classify[names_all[i]] == 1) else [-1*100]), axis=None)
+    codes_all[i] = np.concatenate((codes_all[i], [radio_input_confidence[names_all[i]]*100]), axis=None)
 codes_all = np.array(codes_all)
 
 pca = PCA(n_components=len(codes_all)).fit(codes_all)
-codes_all = pca.transform(codes_all)
+#codes_all = pca.transform(codes_all)
 #print(codes_all.shape)
 
 #print(codes_all)
@@ -316,8 +324,8 @@ print("Radiologist accuracy: " + str(acc))
 print("Radiologist FPR: " + str(fp/len(labels_normal)))
 print("Radiologist TPR: " + str(tp/len(labels_cancer)))
 print("Radiologist AUC: " + str(roc_auc))
-#plt.hist(ROCs)
-#plt.show()
+plt.hist(ROCs)
+plt.show()
 
 
 # Creates a TSNE plot for the deep features generated
@@ -342,10 +350,11 @@ plt.xlim([min(tsne_embedding[:,0]-1) - 0.1 *(max(tsne_embedding[:,0]) - min(tsne
 plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1])), max(tsne_embedding[:,1]) + 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1]))])
 plt.show()
 
-"""
-with open('../Results/ROCsNoCropSameDir.txt', 'w') as f:
+
+with open('../Results/LGBMInceptionV4NoCropSameDir.txt', 'w') as f:
     for item in ROCs:
         f.write("%s\n" % item)
+"""
 with open('../Results/predictionsNoCropSameDir.txt', 'w') as f:
     for item in predictions:
         f.write("%s\n" % item)
@@ -359,3 +368,4 @@ with open('../Results/names.txt', 'w') as f:
     for item in names_all:
         f.write("%s\n" % item)
             """
+
