@@ -175,6 +175,7 @@ codes_rotate270mirrored = codes_rotate270mirrored.detach().numpy()
 
 #codes_all = np.concatenate((codes_all, codes_rotate90, codes_rotate180, codes_rotate270, codes_mirrored, codes_rotate90mirrored, codes_rotate180mirrored, codes_rotate270mirrored), axis=1)
 
+
 codes_all = codes_all.tolist()
 for i in range(len(names_all)):
     codes_all[i] = np.concatenate((codes_all[i], [1*100] if(radio_input_classify[names_all[i]] == 1) else [-1*100]), axis=None)
@@ -183,7 +184,7 @@ codes_all = np.array(codes_all)
 
 pca = PCA(n_components=len(codes_all)).fit(codes_all)
 #codes_all = pca.transform(codes_all)
-#print(codes_all.shape)
+print(codes_all.shape)
 
 #print(codes_all)
 
@@ -229,7 +230,7 @@ roc_auc = auc(fpr, tpr)
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
 plt.legend(loc='lower right', fontsize='x-large')
-plt.title("ROC Curve: Machine")
+plt.title("ROC Curve: Machine with radiologist gist input")
 plt.plot([0, 1], [0, 1], color='#67809f', linestyle='--')
 plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
@@ -351,10 +352,11 @@ plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne
 plt.show()
 
 
+"""
 with open('../Results/LGBMInceptionV4NoCropSameDir.txt', 'w') as f:
     for item in ROCs:
         f.write("%s\n" % item)
-"""
+
 with open('../Results/predictionsNoCropSameDir.txt', 'w') as f:
     for item in predictions:
         f.write("%s\n" % item)
