@@ -51,10 +51,21 @@ def new_forward_vgg19(self, x):
     print("x3 " + str(x3.size()))
     return x3
 
-model = pretrainedmodels.inceptionv4(num_classes=1000, pretrained='imagenet')
-model.eval()
-#model.forward = types.MethodType(new_forward_vgg19, model)
+model_name = "inceptionv4"
+classifier_name = "LGBM"
+use_rotations = False
+use_radiologist_gist = True
+use_PCA = False
+show_charts = False
+print_statements_debug = False
 
+if(model_name == "vgg19"):
+    model = pretrainedmodels.vgg19(num_classes=1000, pretrained='imagenet')
+    model.eval()
+    model.forward = types.MethodType(new_forward_vgg19, model)
+elif(model_name == "inceptionv4"):
+    model = pretrainedmodels.inceptionv4(num_classes=1000, pretrained='imagenet')
+    model.eval()
 
 for param in model.parameters():
     param.requires_grad = False
@@ -68,6 +79,7 @@ radio_input_classify, radio_input_confidence = utility_functions.loadRadiologist
 
 images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDirTorch(("../Images/NoCropForAnalysis/Normal",), (0,), model)
 images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDirTorch(("../Images/NoCropForAnalysis/Cancer",), (1,), model)
+
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -127,34 +139,40 @@ rotate90mirrored = rotate90mirrored.cuda()
 rotate180mirrored = rotate180mirrored.cuda()
 rotate270mirrored = rotate270mirrored.cuda()
 
-#for item in model.named_children():
-    #print(item)
-#codes_all = model(images_all)
+if(model_name == "vgg19"):
+    codes_all = model(images_all)
+    codes_rotate90 = model(rotate90)
+    codes_rotate180 = model(rotate180)
+    codes_rotate270 = model(rotate270)
+    codes_mirrored = model(mirrored)
+    codes_rotate90mirrored = model(rotate90mirrored)
+    codes_rotate180mirrored = model(rotate180mirrored)
+    codes_rotate270mirrored = model(rotate270mirrored)
 
-#codes_all = model(images_all)
-codes_all = model.features(images_all)
-codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
-#codes_rotate90 = model(rotate90)
-codes_rotate90 = model.features(rotate90)
-codes_rotate90 = model._modules["avg_pool"](codes_rotate90).flatten(1, -1)
-#codes_rotate180 = model(rotate180)
-codes_rotate180 = model.features(rotate180)
-codes_rotate180 = model._modules["avg_pool"](codes_rotate180).flatten(1, -1)
-#codes_rotate270 = model(rotate270)
-codes_rotate270 = model.features(rotate270)
-codes_rotate270 = model._modules["avg_pool"](codes_rotate270).flatten(1, -1)
-#codes_mirrored = model(mirrored)
-codes_mirrored = model.features(mirrored)
-codes_mirrored = model._modules["avg_pool"](codes_mirrored).flatten(1, -1)
-#codes_rotate90mirrored = model(rotate90mirrored)
-codes_rotate90mirrored = model.features(rotate90mirrored)
-codes_rotate90mirrored = model._modules["avg_pool"](codes_rotate90mirrored).flatten(1, -1)
-#codes_rotate180mirrored = model(rotate180mirrored)
-codes_rotate180mirrored = model.features(rotate180mirrored)
-codes_rotate180mirrored = model._modules["avg_pool"](codes_rotate180mirrored).flatten(1, -1)
-#codes_rotate270mirrored = model(rotate270mirrored)
-codes_rotate270mirrored = model.features(rotate270mirrored)
-codes_rotate270mirrored = model._modules["avg_pool"](codes_rotate270mirrored).flatten(1, -1)
+elif(model_name == "inceptionv4"):
+    codes_all = model.features(images_all)
+    codes_all = model._modules["avg_pool"](codes_all).flatten(1, -1)
+
+    codes_rotate90 = model.features(rotate90)
+    codes_rotate90 = model._modules["avg_pool"](codes_rotate90).flatten(1, -1)
+
+    codes_rotate180 = model.features(rotate180)
+    codes_rotate180 = model._modules["avg_pool"](codes_rotate180).flatten(1, -1)
+
+    codes_rotate270 = model.features(rotate270)
+    codes_rotate270 = model._modules["avg_pool"](codes_rotate270).flatten(1, -1)
+
+    codes_mirrored = model.features(mirrored)
+    codes_mirrored = model._modules["avg_pool"](codes_mirrored).flatten(1, -1)
+
+    codes_rotate90mirrored = model.features(rotate90mirrored)
+    codes_rotate90mirrored = model._modules["avg_pool"](codes_rotate90mirrored).flatten(1, -1)
+
+    codes_rotate180mirrored = model.features(rotate180mirrored)
+    codes_rotate180mirrored = model._modules["avg_pool"](codes_rotate180mirrored).flatten(1, -1)
+
+    codes_rotate270mirrored = model.features(rotate270mirrored)
+    codes_rotate270mirrored = model._modules["avg_pool"](codes_rotate270mirrored).flatten(1, -1)
 
 codes_all = codes_all.cpu()
 codes_all = codes_all.detach().numpy()
@@ -173,27 +191,27 @@ codes_rotate180mirrored = codes_rotate180mirrored.detach().numpy()
 codes_rotate270mirrored = codes_rotate270mirrored.cpu()
 codes_rotate270mirrored = codes_rotate270mirrored.detach().numpy()
 
-#codes_all = np.concatenate((codes_all, codes_rotate90, codes_rotate180, codes_rotate270, codes_mirrored, codes_rotate90mirrored, codes_rotate180mirrored, codes_rotate270mirrored), axis=1)
+if(use_rotations):
+    codes_all = np.concatenate((codes_all, codes_rotate90, codes_rotate180, codes_rotate270, codes_mirrored, codes_rotate90mirrored, codes_rotate180mirrored, codes_rotate270mirrored), axis=1)
 
+if(use_radiologist_gist):
+    codes_all = codes_all.tolist()
+    for i in range(len(names_all)):
+        codes_all[i] = np.concatenate((codes_all[i], [1*100] if(radio_input_classify[names_all[i]] == 1) else [-1*100]), axis=None)
+        codes_all[i] = np.concatenate((codes_all[i], [radio_input_confidence[names_all[i]]*100]), axis=None)
+    codes_all = np.array(codes_all)
 
-codes_all = codes_all.tolist()
-for i in range(len(names_all)):
-    codes_all[i] = np.concatenate((codes_all[i], [1*100] if(radio_input_classify[names_all[i]] == 1) else [-1*100]), axis=None)
-    codes_all[i] = np.concatenate((codes_all[i], [radio_input_confidence[names_all[i]]*100]), axis=None)
-codes_all = np.array(codes_all)
 
 pca = PCA(n_components=len(codes_all)).fit(codes_all)
-#codes_all = pca.transform(codes_all)
-print(codes_all.shape)
-
-#print(codes_all)
+if(use_PCA):
+    codes_all = pca.transform(codes_all)
+print("Codes shape: " + str(codes_all.shape))
 
 codes_normal = codes_all[0:len(names_normal)]
 codes_cancer = codes_all[len(names_normal):len(codes_all)]
 
 
 clf = LinearSVC(C=1000, max_iter=10000)
-#clf = SVC(C=10, kernel="rbf", gamma="scale")
 
 params = {}
 params['learning_rate'] = 0.003
@@ -206,7 +224,6 @@ params['min_data'] = 1
 params['max_depth'] = 1000
 
 # For LOO and Bootstrapping
-
 loo = LeaveOneOut()
 predictions = np.zeros(len(labels_all))
 confidence = np.zeros(len(labels_all))
@@ -215,13 +232,21 @@ conf_roc = np.zeros(len(labels_all))
 for train_index, test_index in loo.split(codes_all):   
     X_train, X_test = codes_all[train_index], codes_all[test_index]
     y_train, y_test = labels_all[train_index], labels_all[test_index]
-    #clf.fit(X_train, y_train)
-    clf = lgbm.train(params, lgbm.Dataset(X_train, y_train), 100)
+    if(classifier_name == "SVM"):
+        clf.fit(X_train, y_train)
+    elif(classifier_name == "LGBM"):
+        clf = lgbm.train(params, lgbm.Dataset(X_train, y_train), 100)
     predictions[test_index] = 1 if clf.predict(X_test) > 0.5 else 0
-    #print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
-    confidence[test_index] = clf.predict(X_test)#abs(clf.decision_function(X_test))
-    conf_roc[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
-    for_tsne[test_index] = clf.predict(X_test)#clf.decision_function(X_test)
+    if(classifier_name == "SVM"):
+        confidence[test_index] = abs(clf.decision_function(X_test))
+        conf_roc[test_index] = clf.decision_function(X_test)
+        for_tsne[test_index] = clf.decision_function(X_test)
+    elif(classifier_name == "LGBM"):
+        confidence[test_index] = clf.predict(X_test)
+        conf_roc[test_index] = clf.predict(X_test)
+        for_tsne[test_index] = clf.predict(X_test)
+    if(print_statements_debug):
+        print(str(predictions[test_index]) + " " + str(labels_all[test_index]))
 
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)
@@ -236,25 +261,13 @@ plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
-plt.show()
+if(show_charts):
+    plt.show()
 print("Machine accuracy: " + str(acc))
 print("Machine FPR: " + str(fp/len(labels_normal)))
 print("Machine TPR: " + str(tp/len(labels_cancer)))
 print("Machine AUC: " + str(roc_auc))
 
-#utility_functions.printListInOrder(predictions)
-# if testing human + AI
-"""
-i = 0
-while i < len(names_all):
-    if confidence[i] < radio_input_confidence[names_all[i]]:
-        predictions[i] = radio_input_classify[names_all[i]]
-        conf_roc[i] = radio_input_classify[names_all[i]]
-        if(predictions[i] == 0):
-            conf_roc[i] = -conf_roc[i]
-    i = i + 1   
-# end testing human + AI     
-"""
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
 roc_auc = auc(fpr, tpr)
 
@@ -267,7 +280,8 @@ plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
-plt.show()
+if(show_charts):
+    plt.show()
 
 ROCs = []
 for iteration in range(1000):
@@ -278,35 +292,20 @@ for iteration in range(1000):
     fpr, tpr, thresholds = roc_curve(sample_labels, sample_scores)
     roc_auc_sample = auc(fpr, tpr)
     ROCs.append(roc_auc_sample)
-    #print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
+    if(print_statements_debug):
+        print(str(iteration) + " sample AUC: " + str(ROCs[len(ROCs)-1]))
 
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)
 
-print("Machine+radiologist accuracy: " + str(acc))
-print("Machine+radiologist FPR: " + str(fp/len(labels_normal)))
-print("Machine+radiologist TPR: " + str(tp/len(labels_cancer)))
-print("Machine+radiologist AUC: " + str(roc_auc))
 print("Avg AUC: " + str(np.average(ROCs)))
 print("STDev of CV AUC: " + str(np.std(ROCs)))
-print("StdErr of CV AUC: " + str(stats.sem(ROCs)))
-# Method 1, direct CI computation
-print("95% CI for CV AUC 1: " + str(roc_auc - 1.96 * np.std(ROCs)) + " to " + str(roc_auc + 1.96 * np.std(ROCs)))
-# Method 2, implicit CI from the sorted scores 
+
 sorted_scores = np.array(ROCs)
 sorted_scores.sort()
 confidence_lower = sorted_scores[int(0.025 * len(ROCs))]
 confidence_upper = sorted_scores[int(0.975 * len(ROCs))]
-print("95% CI for CV AUC 2: " + str(confidence_lower) + " to " + str(confidence_upper))
-
-# Method 3 from https://machinelearningmastery.com/calculate-bootstrap-confidence-intervals-machine-learning-results-python/
-# Recommended by Prof. Chen
-alpha = 0.95
-p = ((1.0-alpha)/2.0)*100
-lower = max(0.0, np.percentile(ROCs, p))
-p = (alpha+((1.0-alpha)/2.0))*100
-upper = min(1.0, np.percentile(ROCs, p))
-print("95% CI for CV AUC 3: " + str(lower) + " to " + str(upper))
+print("95% CI for CV AUC: " + str(confidence_lower) + " to " + str(confidence_upper))
 
 i = 0
 radio_prediction_list = []
@@ -326,7 +325,8 @@ print("Radiologist FPR: " + str(fp/len(labels_normal)))
 print("Radiologist TPR: " + str(tp/len(labels_cancer)))
 print("Radiologist AUC: " + str(roc_auc))
 plt.hist(ROCs)
-plt.show()
+if(show_charts):
+    plt.show()
 
 
 # Creates a TSNE plot for the deep features generated
@@ -349,14 +349,15 @@ plt.legend(loc='lower right', fontsize='x-large')
 plt.title("t-sne embedding")
 plt.xlim([min(tsne_embedding[:,0]-1) - 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0])), max(tsne_embedding[:,0]) + 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0]))])
 plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1])), max(tsne_embedding[:,1]) + 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1]))])
-plt.show()
+if(show_charts):
+    plt.show()
 
 
-"""
-with open('../Results/LGBMInceptionV4NoCropSameDir.txt', 'w') as f:
+
+with open('../Results/LGBMInceptionV4NoCropSameDirWithRadioGist.txt', 'w') as f:
     for item in ROCs:
         f.write("%s\n" % item)
-
+"""
 with open('../Results/predictionsNoCropSameDir.txt', 'w') as f:
     for item in predictions:
         f.write("%s\n" % item)
@@ -371,3 +372,23 @@ with open('../Results/names.txt', 'w') as f:
         f.write("%s\n" % item)
             """
 
+set_1 = []
+set_2 = []
+set_3 = []
+
+with open('../Results/LGBMInceptionV4NoCropSameDirNoRadioGist.txt', 'r') as f:
+    for x in f:
+        set_1.append(float(x))
+with open('../Results/LGBMInceptionV4NoCropSameDirWithRadioGist.txt', 'r') as f:
+    for x in f:
+        set_2.append(float(x))
+with open('../Results/RadiologistBootstrappingROCs.txt', 'r') as f:
+    for x in f:
+        set_3.append(float(x))
+        
+w, p1 = stats.levene(set_1, set_2, set_3)
+h_value, pvalue = stats.f_oneway(set_1, set_2, set_3)
+print("W: " + str(w))
+print("p: " + str(p1))
+print("F: " + str(h_value))
+print("p: " + str(pvalue))
