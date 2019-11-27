@@ -38,8 +38,8 @@ names_path = './names'
 radio_input_classify, radio_input_confidence = utility_functions.loadRadiologistData("../RadiologistData/radiologistInput.csv", 1, 0)
 
 
-images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/Normal",), (0,))
-images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/Cancer",), (1,))
+images_normal, labels_normal, names_normal = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Normal",), (0,))
+images_cancer, labels_cancer, names_cancer = utility_functions.loadImagesFromDir(("../Images/CroppedOriginalRotation/Cancer",), (1,))
 # If only using images that have radiologist response
 i = 0
 while i < len(names_normal):
@@ -153,6 +153,10 @@ for train_index, test_index in loo.split(codes_all):
 tn, fp, fn, tp = confusion_matrix(labels_all, predictions).ravel()
 acc = accuracy_score(labels_all, predictions)
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
+print("FPR without gist")
+utility_functions.printListInOrder(fpr)
+print("TPR without gist")
+utility_functions.printListInOrder(tpr)
 roc_auc = auc(fpr, tpr)
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
@@ -163,7 +167,7 @@ plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
-plt.show()
+#plt.show()
 print("Machine accuracy: " + str(acc))
 print("Machine FPR: " + str(fp/len(labels_normal)))
 print("Machine TPR: " + str(tp/len(labels_cancer)))
@@ -182,7 +186,10 @@ while i < len(names_all):
 # end testing human + AI     
 fpr, tpr, thresholds = roc_curve(labels_all, conf_roc)
 roc_auc = auc(fpr, tpr)
-
+print("FPR with gist")
+utility_functions.printListInOrder(fpr)
+print("TPR with gist")
+utility_functions.printListInOrder(tpr)
 plt.plot(fpr, tpr, 'darkorange',
          label='AUC = %0.2f'% roc_auc)
 plt.legend(loc='lower right', fontsize='x-large')
@@ -192,7 +199,7 @@ plt.xlim([-0.1, 1.0])
 plt.ylim([-0.1, 1.0])
 plt.ylabel('True Positive Rate', fontsize=14)
 plt.xlabel('False Positive Rate', fontsize=14)
-plt.show()
+#plt.show()
 
 ROCs = []
 for iteration in range(1000):
@@ -274,7 +281,7 @@ plt.legend(loc='lower right', fontsize='x-large')
 plt.title("t-sne embedding")
 plt.xlim([min(tsne_embedding[:,0]-1) - 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0])), max(tsne_embedding[:,0]) + 0.1 *(max(tsne_embedding[:,0]) - min(tsne_embedding[:,0]))])
 plt.ylim([min(tsne_embedding[:,1]-1) - 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1])), max(tsne_embedding[:,1]) + 0.1 *(max(tsne_embedding[:,1]) - min(tsne_embedding[:,1]))])
-plt.show()
+#plt.show()
 
 """
 with open('../Results/ROCsNoCropSameDir.txt', 'w') as f:
